@@ -1,0 +1,1173 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>StudyGo - K12 智慧預複習</title>
+    <meta name="theme-color" content="#2563eb">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="manifest" href="/manifest.json">
+    <link rel="icon" type="image/svg+xml" href="/icons/icon.svg">
+    <link rel="apple-touch-icon" href="/icons/icon.svg">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+    <script>
+    tailwind.config = {
+        theme: {
+            extend: {
+                colors: {
+                    brand: { 50:'#eff6ff', 100:'#dbeafe', 200:'#bfdbfe', 300:'#93c5fd', 400:'#60a5fa', 500:'#3b82f6', 600:'#2563eb', 700:'#1d4ed8', 800:'#1e3a5f', 900:'#0f1d35' },
+                    accent: { 400:'#a78bfa', 500:'#8b5cf6', 600:'#7c3aed' },
+                    warm:   { 400:'#fb923c', 500:'#f97316' },
+                }
+            }
+        }
+    }
+    mermaid.initialize({startOnLoad: false, theme: 'neutral'});
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+TC:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * { font-family: 'Noto Sans TC', 'Inter', system-ui, sans-serif; }
+        body { background: linear-gradient(135deg, #f0f4ff 0%, #faf5ff 50%, #fff7ed 100%); min-height: 100vh; }
+
+        /* Tabs */
+        .nav-tab { position: relative; padding: 8px 20px; border-radius: 10px; font-weight: 500; color: #64748b; transition: all 0.3s; }
+        .nav-tab:hover { color: #3b82f6; background: rgba(59,130,246,0.06); }
+        .nav-tab.active { color: #fff; background: linear-gradient(135deg, #3b82f6, #8b5cf6); box-shadow: 0 4px 15px rgba(59,130,246,0.35); }
+
+        /* Cards */
+        .glass-card { background: rgba(255,255,255,0.85); backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,0.6); border-radius: 16px; box-shadow: 0 4px 24px rgba(0,0,0,0.06); }
+        .glass-card-hover { transition: all 0.3s cubic-bezier(0.4,0,0.2,1); }
+        .glass-card-hover:hover { transform: translateY(-2px); box-shadow: 0 12px 40px rgba(0,0,0,0.1); border-color: rgba(59,130,246,0.2); }
+
+        /* Difficulty badges */
+        .diff-badge { display: inline-flex; align-items: center; gap: 4px; padding: 2px 10px; border-radius: 20px; font-size: 12px; font-weight: 600; }
+        .diff-1 { background: linear-gradient(135deg,#dcfce7,#bbf7d0); color: #166534; }
+        .diff-2 { background: linear-gradient(135deg,#d1fae5,#a7f3d0); color: #065f46; }
+        .diff-3 { background: linear-gradient(135deg,#fef9c3,#fde68a); color: #854d0e; }
+        .diff-4 { background: linear-gradient(135deg,#fed7aa,#fdba74); color: #9a3412; }
+        .diff-5 { background: linear-gradient(135deg,#fecaca,#fca5a5); color: #991b1b; }
+
+        .diff-stars::before { content: attr(data-stars); letter-spacing: -1px; }
+
+        /* Options */
+        .option-btn { transition: all 0.25s cubic-bezier(0.4,0,0.2,1); border: 2px solid #e2e8f0; border-radius: 12px; }
+        .option-btn:hover { border-color: #93c5fd; background: #eff6ff; transform: translateX(6px); }
+        .option-correct { background: linear-gradient(135deg,#dcfce7,#bbf7d0) !important; border-color: #22c55e !important; }
+        .option-wrong { background: linear-gradient(135deg,#fecaca,#fca5a5) !important; border-color: #ef4444 !important; }
+
+        /* Animations */
+        .fade-in { animation: fadeIn 0.4s ease-out; }
+        @keyframes fadeIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
+        .slide-up { animation: slideUp 0.5s ease-out; }
+        @keyframes slideUp { from { opacity:0; transform:translateY(30px); } to { opacity:1; transform:translateY(0); } }
+        .pulse-soft { animation: pulseSoft 2s ease-in-out infinite; }
+        @keyframes pulseSoft { 0%,100% { opacity:1; } 50% { opacity:0.6; } }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+        /* Form inputs */
+        .form-input { border: 2px solid #e2e8f0; border-radius: 10px; padding: 8px 14px; font-size: 14px; transition: all 0.2s; background: white; }
+        .form-input:focus { outline: none; border-color: #93c5fd; box-shadow: 0 0 0 3px rgba(59,130,246,0.1); }
+        .form-select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2394a3b8' d='M6 8L1 3h10z'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 12px center; padding-right: 32px; }
+
+        /* Modal */
+        .modal-overlay { background: rgba(15,23,42,0.5); backdrop-filter: blur(4px); }
+        .modal-content { border-radius: 20px; box-shadow: 0 25px 60px rgba(0,0,0,0.15); }
+
+        /* Hero section */
+        .hero-gradient { background: linear-gradient(135deg, #1e3a5f 0%, #2563eb 40%, #7c3aed 100%); }
+        .hero-pattern { background-image: radial-gradient(rgba(255,255,255,0.1) 1px, transparent 1px); background-size: 24px 24px; }
+
+        /* Tag pills */
+        .tag-pill { display: inline-flex; align-items: center; padding: 2px 10px; border-radius: 20px; font-size: 12px; font-weight: 500; }
+
+        /* Stats card glow */
+        .stat-card { position: relative; overflow: hidden; }
+        .stat-card::before { content:''; position: absolute; top: -50%; left: -50%; width: 200%; height: 200%; background: radial-gradient(circle, rgba(59,130,246,0.05) 0%, transparent 70%); }
+
+        /* Progress bar */
+        .progress-ring { transition: stroke-dashoffset 0.6s ease; }
+
+        /* AI buttons */
+        .ai-btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; border-radius: 10px; font-size: 13px; font-weight: 600; transition: all 0.25s; }
+        .ai-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+
+        /* Empty state */
+        .empty-illustration { opacity: 0.15; }
+    </style>
+</head>
+<body>
+    <!-- ── Header ── -->
+    <header class="sticky top-0 z-50" style="background:rgba(255,255,255,0.7);backdrop-filter:blur(20px);border-bottom:1px solid rgba(0,0,0,0.06);">
+        <div class="max-w-6xl mx-auto px-4 sm:px-6">
+            <div class="flex items-center justify-between h-16">
+                <!-- Logo -->
+                <div class="flex items-center gap-3">
+                    <div class="w-9 h-9 rounded-xl flex items-center justify-center text-white font-bold text-sm" style="background:linear-gradient(135deg,#3b82f6,#8b5cf6);">SG</div>
+                    <div>
+                        <h1 class="text-lg font-bold bg-gradient-to-r from-brand-600 to-accent-500 bg-clip-text text-transparent leading-tight">StudyGo</h1>
+                        <p class="text-[10px] text-gray-400 -mt-0.5 tracking-wide">K12 智慧預複習系統</p>
+                    </div>
+                </div>
+                <!-- Navigation -->
+                <nav class="flex gap-1">
+                    <button onclick="showSection('dashboard')" id="tab-dashboard" class="nav-tab active">
+                        <svg class="w-4 h-4 inline -mt-0.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-4 0h4"/></svg>
+                        總覽
+                    </button>
+                    <button onclick="showSection('browse')" id="tab-browse" class="nav-tab">
+                        <svg class="w-4 h-4 inline -mt-0.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>
+                        題庫
+                    </button>
+                    <button onclick="showSection('practice')" id="tab-practice" class="nav-tab">
+                        <svg class="w-4 h-4 inline -mt-0.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/></svg>
+                        練習
+                    </button>
+                    <button onclick="showSection('scan')" id="tab-scan" class="nav-tab">
+                        <svg class="w-4 h-4 inline -mt-0.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                        拍照
+                    </button>
+                    <button onclick="showSection('upload')" id="tab-upload" class="nav-tab">
+                        <svg class="w-4 h-4 inline -mt-0.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                        新增
+                    </button>
+                </nav>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-6xl mx-auto px-4 sm:px-6 py-6 pb-20">
+
+        <!-- ══════════════════════════════════════ -->
+        <!-- ── Dashboard Section ── -->
+        <!-- ══════════════════════════════════════ -->
+        <section id="sec-dashboard" class="fade-in">
+            <!-- Hero -->
+            <div class="hero-gradient hero-pattern rounded-2xl p-8 mb-6 text-white relative overflow-hidden">
+                <div class="relative z-10">
+                    <h2 class="text-2xl font-bold mb-2">Welcome back!</h2>
+                    <p class="text-blue-100 text-sm max-w-md">透過 AI 故事化教學、智慧圖解，讓每個知識點都變得簡單易懂。開始今天的學習吧！</p>
+                    <div class="flex gap-3 mt-5">
+                        <button onclick="showSection('practice')" class="bg-white text-brand-700 px-5 py-2.5 rounded-xl text-sm font-semibold hover:shadow-lg transition">
+                            開始練習
+                        </button>
+                        <button onclick="showSection('browse')" class="bg-white/15 backdrop-blur text-white px-5 py-2.5 rounded-xl text-sm font-semibold hover:bg-white/25 transition border border-white/20">
+                            瀏覽題庫
+                        </button>
+                    </div>
+                </div>
+                <!-- Decorative circles -->
+                <div class="absolute -right-10 -top-10 w-48 h-48 rounded-full bg-white/5"></div>
+                <div class="absolute -right-5 top-16 w-32 h-32 rounded-full bg-white/5"></div>
+                <div class="absolute right-20 -bottom-8 w-24 h-24 rounded-full bg-white/5"></div>
+            </div>
+
+            <!-- Stats Row -->
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6" id="stats-row">
+                <div class="glass-card stat-card p-5">
+                    <p class="text-xs text-gray-400 font-medium mb-1">總題數</p>
+                    <p class="text-2xl font-bold text-gray-800" id="stat-total">--</p>
+                    <div class="mt-2 flex items-center gap-1">
+                        <div class="w-full bg-gray-100 rounded-full h-1.5"><div class="bg-brand-500 h-1.5 rounded-full" style="width:100%"></div></div>
+                    </div>
+                </div>
+                <div class="glass-card stat-card p-5">
+                    <p class="text-xs text-gray-400 font-medium mb-1">科目數</p>
+                    <p class="text-2xl font-bold text-gray-800" id="stat-subjects">--</p>
+                    <div class="mt-2 flex items-center gap-1">
+                        <div class="w-full bg-gray-100 rounded-full h-1.5"><div class="bg-accent-500 h-1.5 rounded-full" style="width:70%"></div></div>
+                    </div>
+                </div>
+                <div class="glass-card stat-card p-5">
+                    <p class="text-xs text-gray-400 font-medium mb-1">AI 解說</p>
+                    <p class="text-2xl font-bold text-gray-800" id="stat-ai">--</p>
+                    <div class="mt-2 flex items-center gap-1">
+                        <div class="w-full bg-gray-100 rounded-full h-1.5"><div class="bg-warm-500 h-1.5 rounded-full" style="width:30%"></div></div>
+                    </div>
+                </div>
+                <div class="glass-card stat-card p-5">
+                    <p class="text-xs text-gray-400 font-medium mb-1">知識標籤</p>
+                    <p class="text-2xl font-bold text-gray-800" id="stat-tags">--</p>
+                    <div class="mt-2 flex items-center gap-1">
+                        <div class="w-full bg-gray-100 rounded-full h-1.5"><div class="bg-emerald-500 h-1.5 rounded-full" style="width:50%"></div></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Actions -->
+            <h3 class="text-sm font-semibold text-gray-500 mb-3 tracking-wide">快速功能</h3>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                <div onclick="showSection('practice')" class="glass-card glass-card-hover p-5 cursor-pointer group">
+                    <div class="w-10 h-10 rounded-xl flex items-center justify-center mb-3" style="background:linear-gradient(135deg,#3b82f6,#60a5fa);">
+                        <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                    </div>
+                    <h4 class="font-semibold text-gray-800 mb-1 group-hover:text-brand-600 transition">快速練習</h4>
+                    <p class="text-xs text-gray-400">選擇科目，隨機出題練習</p>
+                </div>
+                <div onclick="showSection('browse')" class="glass-card glass-card-hover p-5 cursor-pointer group">
+                    <div class="w-10 h-10 rounded-xl flex items-center justify-center mb-3" style="background:linear-gradient(135deg,#8b5cf6,#a78bfa);">
+                        <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                    </div>
+                    <h4 class="font-semibold text-gray-800 mb-1 group-hover:text-accent-600 transition">搜尋題目</h4>
+                    <p class="text-xs text-gray-400">依科目、章節、難度篩選</p>
+                </div>
+                <div onclick="showSection('upload')" class="glass-card glass-card-hover p-5 cursor-pointer group">
+                    <div class="w-10 h-10 rounded-xl flex items-center justify-center mb-3" style="background:linear-gradient(135deg,#f97316,#fb923c);">
+                        <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                    </div>
+                    <h4 class="font-semibold text-gray-800 mb-1 group-hover:text-warm-500 transition">新增題目</h4>
+                    <p class="text-xs text-gray-400">手動建立或批次匯入題庫</p>
+                </div>
+            </div>
+
+            <!-- Recent Questions -->
+            <h3 class="text-sm font-semibold text-gray-500 mb-3 tracking-wide">最新題目</h3>
+            <div id="recent-questions" class="space-y-3"></div>
+        </section>
+
+        <!-- ══════════════════════════════════════ -->
+        <!-- ── Browse Section ── -->
+        <!-- ══════════════════════════════════════ -->
+        <section id="sec-browse" class="hidden fade-in">
+            <!-- Filter Bar -->
+            <div class="glass-card p-5 mb-5">
+                <div class="flex items-center gap-2 mb-3">
+                    <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"/></svg>
+                    <span class="text-sm font-semibold text-gray-500">篩選條件</span>
+                </div>
+                <div class="flex flex-wrap gap-3 items-end">
+                    <div class="flex-1 min-w-[120px]">
+                        <label class="block text-xs text-gray-400 mb-1 font-medium">學級</label>
+                        <select id="filter-level" onchange="loadSubjects()" class="form-input form-select w-full">
+                            <option value="">全部</option>
+                            <option value="junior">國中</option>
+                            <option value="senior">高中</option>
+                        </select>
+                    </div>
+                    <div class="flex-1 min-w-[120px]">
+                        <label class="block text-xs text-gray-400 mb-1 font-medium">科目</label>
+                        <select id="filter-subject" onchange="loadChapters(); loadQuestions()" class="form-input form-select w-full">
+                            <option value="">全部</option>
+                        </select>
+                    </div>
+                    <div class="flex-1 min-w-[120px]">
+                        <label class="block text-xs text-gray-400 mb-1 font-medium">章節</label>
+                        <select id="filter-chapter" onchange="loadQuestions()" class="form-input form-select w-full">
+                            <option value="">全部</option>
+                        </select>
+                    </div>
+                    <div class="flex-1 min-w-[100px]">
+                        <label class="block text-xs text-gray-400 mb-1 font-medium">來源</label>
+                        <input id="filter-source" onchange="loadQuestions()" placeholder="如：113學測" class="form-input w-full">
+                    </div>
+                    <div class="flex-1 min-w-[100px]">
+                        <label class="block text-xs text-gray-400 mb-1 font-medium">難度</label>
+                        <select id="filter-difficulty" onchange="loadQuestions()" class="form-input form-select w-full">
+                            <option value="">全部</option>
+                            <option value="1">1 - 入門</option>
+                            <option value="2">2 - 基礎</option>
+                            <option value="3">3 - 中等</option>
+                            <option value="4">4 - 進階</option>
+                            <option value="5">5 - 挑戰</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Results header -->
+            <div class="flex items-center justify-between mb-3">
+                <p class="text-sm text-gray-400" id="result-count"></p>
+            </div>
+
+            <!-- Question List -->
+            <div id="question-list" class="space-y-3"></div>
+            <div id="pagination" class="flex justify-center gap-2 mt-6"></div>
+        </section>
+
+        <!-- ══════════════════════════════════════ -->
+        <!-- ── Scan / OCR Section ── -->
+        <!-- ══════════════════════════════════════ -->
+        <section id="sec-scan" class="hidden fade-in">
+            <div class="max-w-2xl mx-auto">
+                <div class="text-center mb-6">
+                    <div class="w-16 h-16 mx-auto rounded-2xl flex items-center justify-center mb-4" style="background:linear-gradient(135deg,#06b6d4,#3b82f6);">
+                        <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                    </div>
+                    <h2 class="text-xl font-bold text-gray-800">拍照擷取題目</h2>
+                    <p class="text-sm text-gray-400 mt-1">拍攝或上傳考卷照片，AI 自動辨識題目內容</p>
+                </div>
+
+                <div class="glass-card p-6">
+                    <!-- Camera / Upload area -->
+                    <div id="scan-upload-area" class="border-2 border-dashed border-gray-200 rounded-2xl p-8 text-center hover:border-brand-300 transition cursor-pointer relative"
+                         onclick="document.getElementById('scan-file-input').click()">
+                        <div id="scan-preview-container" class="hidden">
+                            <img id="scan-preview" class="max-h-64 mx-auto rounded-xl shadow-md mb-4" alt="preview">
+                            <button onclick="event.stopPropagation();clearScanPreview()" class="text-sm text-red-400 hover:text-red-600">移除圖片</button>
+                        </div>
+                        <div id="scan-placeholder">
+                            <div class="w-14 h-14 mx-auto rounded-2xl flex items-center justify-center bg-gray-100 mb-4">
+                                <svg class="w-7 h-7 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                            </div>
+                            <p class="text-sm text-gray-500 font-medium mb-1">點擊上傳或拍照</p>
+                            <p class="text-xs text-gray-400">支援 JPG、PNG，手機可直接拍照</p>
+                        </div>
+                        <input id="scan-file-input" type="file" accept="image/*" capture="environment" class="hidden" onchange="handleScanFile(event)">
+                    </div>
+
+                    <!-- Scan button -->
+                    <button id="scan-btn" onclick="submitScan()" disabled
+                        class="w-full mt-4 py-3 rounded-xl text-white font-semibold text-sm transition disabled:opacity-40 disabled:cursor-not-allowed"
+                        style="background:linear-gradient(135deg,#06b6d4,#3b82f6);">
+                        <svg class="w-4 h-4 inline -mt-0.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                        AI 辨識題目
+                    </button>
+
+                    <!-- Loading state -->
+                    <div id="scan-loading" class="hidden mt-4">
+                        <div class="flex items-center justify-center gap-3 p-5 rounded-xl bg-blue-50 border border-blue-100">
+                            <div class="w-5 h-5 border-2 border-brand-500 border-t-transparent rounded-full animate-spin"></div>
+                            <span class="text-sm text-brand-600 font-medium">AI 正在辨識圖片中的題目...</span>
+                        </div>
+                    </div>
+
+                    <!-- Result -->
+                    <div id="scan-result" class="hidden mt-5 space-y-4">
+                        <div class="flex items-center gap-2 mb-2">
+                            <svg class="w-5 h-5 text-emerald-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+                            <span class="text-sm font-semibold text-emerald-700">辨識成功！請確認內容後儲存</span>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm text-gray-600 mb-1.5 font-medium">題目內容</label>
+                            <textarea id="scan-content" rows="4" class="form-input w-full"></textarea>
+                        </div>
+                        <div>
+                            <label class="block text-sm text-gray-600 mb-1.5 font-medium">選項</label>
+                            <textarea id="scan-options" rows="4" class="form-input w-full" placeholder="每行一個選項"></textarea>
+                        </div>
+                        <div class="grid grid-cols-3 gap-3">
+                            <div>
+                                <label class="block text-sm text-gray-600 mb-1.5 font-medium">答案</label>
+                                <input id="scan-answer" class="form-input w-full">
+                            </div>
+                            <div>
+                                <label class="block text-sm text-gray-600 mb-1.5 font-medium">科目</label>
+                                <input id="scan-subject" class="form-input w-full" readonly>
+                            </div>
+                            <div>
+                                <label class="block text-sm text-gray-600 mb-1.5 font-medium">難度</label>
+                                <input id="scan-difficulty" class="form-input w-full" type="number" min="1" max="5">
+                            </div>
+                        </div>
+                        <div class="flex gap-3">
+                            <button onclick="saveScanResult()" class="flex-1 py-3 rounded-xl text-white font-semibold text-sm" style="background:linear-gradient(135deg,#22c55e,#16a34a);">
+                                儲存到題庫
+                            </button>
+                            <button onclick="generateScanStory()" class="flex-1 py-3 rounded-xl text-white font-semibold text-sm" style="background:linear-gradient(135deg,#f59e0b,#d97706);">
+                                AI 故事解說
+                            </button>
+                        </div>
+                        <div id="scan-save-msg" class="text-sm"></div>
+                        <div id="scan-story-result"></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ══════════════════════════════════════ -->
+        <!-- ── Practice Section ── -->
+        <!-- ══════════════════════════════════════ -->
+        <section id="sec-practice" class="hidden fade-in">
+            <div id="practice-setup" class="max-w-lg mx-auto slide-up">
+                <div class="text-center mb-6">
+                    <div class="w-16 h-16 mx-auto rounded-2xl flex items-center justify-center mb-4" style="background:linear-gradient(135deg,#3b82f6,#8b5cf6);">
+                        <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/></svg>
+                    </div>
+                    <h2 class="text-xl font-bold text-gray-800">開始練習</h2>
+                    <p class="text-sm text-gray-400 mt-1">選擇科目與題數，系統會隨機出題</p>
+                </div>
+                <div class="glass-card p-6 space-y-4">
+                    <div>
+                        <label class="block text-sm text-gray-600 mb-1.5 font-medium">選擇科目</label>
+                        <select id="practice-subject" class="form-input form-select w-full"></select>
+                    </div>
+                    <div>
+                        <label class="block text-sm text-gray-600 mb-1.5 font-medium">練習題數</label>
+                        <div class="grid grid-cols-3 gap-2">
+                            <label class="relative cursor-pointer">
+                                <input type="radio" name="pcount" value="5" class="peer sr-only">
+                                <div class="border-2 border-gray-200 rounded-xl py-3 text-center text-sm font-semibold text-gray-500 peer-checked:border-brand-500 peer-checked:text-brand-600 peer-checked:bg-brand-50 transition">5 題</div>
+                            </label>
+                            <label class="relative cursor-pointer">
+                                <input type="radio" name="pcount" value="10" class="peer sr-only" checked>
+                                <div class="border-2 border-gray-200 rounded-xl py-3 text-center text-sm font-semibold text-gray-500 peer-checked:border-brand-500 peer-checked:text-brand-600 peer-checked:bg-brand-50 transition">10 題</div>
+                            </label>
+                            <label class="relative cursor-pointer">
+                                <input type="radio" name="pcount" value="20" class="peer sr-only">
+                                <div class="border-2 border-gray-200 rounded-xl py-3 text-center text-sm font-semibold text-gray-500 peer-checked:border-brand-500 peer-checked:text-brand-600 peer-checked:bg-brand-50 transition">20 題</div>
+                            </label>
+                        </div>
+                    </div>
+                    <button onclick="startPractice()" class="w-full py-3 rounded-xl text-white font-semibold text-sm hover:shadow-lg transition" style="background:linear-gradient(135deg,#3b82f6,#8b5cf6);">
+                        開始練習
+                    </button>
+                </div>
+            </div>
+            <div id="practice-area" class="hidden"></div>
+        </section>
+
+        <!-- ══════════════════════════════════════ -->
+        <!-- ── Upload Section ── -->
+        <!-- ══════════════════════════════════════ -->
+        <section id="sec-upload" class="hidden fade-in">
+            <div class="max-w-2xl mx-auto">
+                <div class="text-center mb-6">
+                    <div class="w-16 h-16 mx-auto rounded-2xl flex items-center justify-center mb-4" style="background:linear-gradient(135deg,#f97316,#fb923c);">
+                        <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                    </div>
+                    <h2 class="text-xl font-bold text-gray-800">新增題目</h2>
+                    <p class="text-sm text-gray-400 mt-1">手動建立題目，支援多種題型</p>
+                </div>
+                <div class="glass-card p-6">
+                    <form onsubmit="submitQuestion(event)" class="space-y-5">
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm text-gray-600 mb-1.5 font-medium">科目</label>
+                                <select id="q-subject" onchange="loadUploadChapters()" class="form-input form-select w-full" required></select>
+                            </div>
+                            <div>
+                                <label class="block text-sm text-gray-600 mb-1.5 font-medium">章節</label>
+                                <select id="q-chapter" class="form-input form-select w-full"></select>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-3 gap-4">
+                            <div>
+                                <label class="block text-sm text-gray-600 mb-1.5 font-medium">來源</label>
+                                <input id="q-source" placeholder="113學測" class="form-input w-full">
+                            </div>
+                            <div>
+                                <label class="block text-sm text-gray-600 mb-1.5 font-medium">題型</label>
+                                <select id="q-type" class="form-input form-select w-full">
+                                    <option value="single_choice">單選題</option>
+                                    <option value="multi_choice">多選題</option>
+                                    <option value="fill">填充題</option>
+                                    <option value="essay">問答題</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm text-gray-600 mb-1.5 font-medium">難度</label>
+                                <select id="q-difficulty" class="form-input form-select w-full">
+                                    <option value="1">1 - 入門</option>
+                                    <option value="2">2 - 基礎</option>
+                                    <option value="3" selected>3 - 中等</option>
+                                    <option value="4">4 - 進階</option>
+                                    <option value="5">5 - 挑戰</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-sm text-gray-600 mb-1.5 font-medium">題目內容</label>
+                            <textarea id="q-content" rows="4" class="form-input w-full" required placeholder="輸入題目內容，支援 Markdown"></textarea>
+                        </div>
+                        <div>
+                            <label class="block text-sm text-gray-600 mb-1.5 font-medium">選項 <span class="text-gray-300 font-normal">(每行一個)</span></label>
+                            <textarea id="q-options" rows="4" class="form-input w-full" placeholder="A. 第一個選項&#10;B. 第二個選項&#10;C. 第三個選項&#10;D. 第四個選項"></textarea>
+                        </div>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm text-gray-600 mb-1.5 font-medium">正確答案</label>
+                                <input id="q-answer" class="form-input w-full" required placeholder="如 A 或 AB">
+                            </div>
+                            <div>
+                                <label class="block text-sm text-gray-600 mb-1.5 font-medium">知識點標籤</label>
+                                <input id="q-tags" class="form-input w-full" placeholder="三角函數, 正弦定理">
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-sm text-gray-600 mb-1.5 font-medium">詳解 <span class="text-gray-300 font-normal">(選填)</span></label>
+                            <textarea id="q-explanation" rows="3" class="form-input w-full" placeholder="輸入解題步驟與說明"></textarea>
+                        </div>
+                        <button type="submit" class="w-full py-3 rounded-xl text-white font-semibold text-sm hover:shadow-lg transition" style="background:linear-gradient(135deg,#f97316,#fb923c);">
+                            儲存題目
+                        </button>
+                    </form>
+                    <div id="upload-msg" class="mt-4 text-sm"></div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- ── Question Detail Modal ── -->
+    <div id="modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 modal-overlay" onclick="if(event.target===this)closeModal()">
+        <div class="bg-white modal-content max-w-2xl w-full max-h-[90vh] overflow-y-auto p-7 relative slide-up">
+            <button onclick="closeModal()" class="absolute top-4 right-4 w-8 h-8 rounded-lg flex items-center justify-center text-gray-300 hover:text-gray-600 hover:bg-gray-100 transition">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>
+            <div id="modal-content"></div>
+        </div>
+    </div>
+
+    <!-- ══════════════════════════════════════ -->
+    <!-- ── JavaScript ── -->
+    <!-- ══════════════════════════════════════ -->
+    <script>
+    const API = '';
+    let currentPage = 1;
+    const diffLabels = {1:'入門',2:'基礎',3:'中等',4:'進階',5:'挑戰'};
+    const diffStars = {1:'*',2:'**',3:'***',4:'****',5:'*****'};
+
+    // ── Section switching ──
+    function showSection(name) {
+        document.querySelectorAll('[id^="sec-"]').forEach(s => s.classList.add('hidden'));
+        const sec = document.getElementById(`sec-${name}`);
+        if (sec) { sec.classList.remove('hidden'); sec.classList.add('fade-in'); }
+        document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+        const tab = document.getElementById(`tab-${name}`);
+        if (tab) tab.classList.add('active');
+        if (name === 'browse') loadQuestions();
+        if (name === 'dashboard') loadDashboard();
+    }
+
+    // ── API helpers ──
+    async function api(path, opts = {}) {
+        const res = await fetch(API + path, {
+            headers: {'Content-Type': 'application/json', ...opts.headers},
+            ...opts,
+        });
+        if (!res.ok) throw new Error(await res.text());
+        return res.json();
+    }
+
+    // ── Dashboard ──
+    async function loadDashboard() {
+        try {
+            const [stats, questions] = await Promise.all([
+                api('/api/stats'),
+                api('/api/questions?size=5'),
+            ]);
+            document.getElementById('stat-total').textContent = stats.total_questions;
+            document.getElementById('stat-subjects').textContent = stats.total_subjects;
+            document.getElementById('stat-ai').textContent = stats.total_ai_contents;
+            document.getElementById('stat-tags').textContent = stats.total_tags;
+
+            // Recent questions
+            const container = document.getElementById('recent-questions');
+            if (questions.data.length === 0) {
+                container.innerHTML = `
+                    <div class="glass-card p-12 text-center">
+                        <svg class="w-16 h-16 mx-auto mb-4 empty-illustration" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>
+                        <p class="text-gray-400 text-sm">尚無題目，點擊「新增」開始建立題庫</p>
+                    </div>`;
+            } else {
+                container.innerHTML = questions.data.map(q => renderQuestionCard(q)).join('');
+            }
+        } catch(e) {
+            console.error('Dashboard load error:', e);
+        }
+    }
+
+    function renderQuestionCard(q) {
+        return `
+        <div class="glass-card glass-card-hover p-5 cursor-pointer" onclick="openQuestion(${q.id})">
+            <div class="flex items-start justify-between gap-4">
+                <div class="flex-1 min-w-0">
+                    <p class="text-sm text-gray-800 line-clamp-2 leading-relaxed">${escHtml(q.content)}</p>
+                    <div class="flex gap-2 mt-3 flex-wrap items-center">
+                        ${q.source ? `<span class="tag-pill bg-brand-50 text-brand-600">${escHtml(q.source)}</span>` : ''}
+                        <span class="diff-badge diff-${q.difficulty}">${diffLabels[q.difficulty] || q.difficulty}</span>
+                        ${q.tags.map(t => `<span class="tag-pill bg-gray-100 text-gray-500">${escHtml(t)}</span>`).join('')}
+                    </div>
+                </div>
+                <div class="flex flex-col gap-1.5 shrink-0 items-end">
+                    ${q.has_story ? '<span class="tag-pill bg-amber-50 text-amber-600 text-[11px]">AI 故事</span>' : ''}
+                    ${q.has_diagram ? '<span class="tag-pill bg-purple-50 text-purple-600 text-[11px]">AI 圖解</span>' : ''}
+                    <svg class="w-4 h-4 text-gray-300 mt-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                </div>
+            </div>
+        </div>`;
+    }
+
+    // ── Load subjects ──
+    async function loadSubjects() {
+        const level = document.getElementById('filter-level').value;
+        const params = level ? `?level=${level}` : '';
+        const subjects = await api(`/api/subjects${params}`);
+        const sel = document.getElementById('filter-subject');
+        sel.innerHTML = '<option value="">全部科目</option>' +
+            subjects.map(s => `<option value="${s.id}">${s.name}</option>`).join('');
+    }
+
+    async function loadAllSubjectSelects() {
+        const subjects = await api('/api/subjects');
+        const html = subjects.map(s => `<option value="${s.id}">${s.level === 'junior' ? '國中' : '高中'} ${s.name}</option>`).join('');
+        ['practice-subject', 'q-subject'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.innerHTML = html;
+        });
+    }
+
+    // ── Load chapters ──
+    async function loadChapters() {
+        const subjectId = document.getElementById('filter-subject').value;
+        const sel = document.getElementById('filter-chapter');
+        if (!subjectId) { sel.innerHTML = '<option value="">全部章節</option>'; return; }
+        const chapters = await api(`/api/chapters?subject_id=${subjectId}`);
+        sel.innerHTML = '<option value="">全部章節</option>' +
+            chapters.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+    }
+
+    async function loadUploadChapters() {
+        const subjectId = document.getElementById('q-subject').value;
+        const sel = document.getElementById('q-chapter');
+        if (!subjectId) { sel.innerHTML = ''; return; }
+        const chapters = await api(`/api/chapters?subject_id=${subjectId}`);
+        sel.innerHTML = '<option value="">（不指定章節）</option>' +
+            chapters.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+    }
+
+    // ── Load questions ──
+    async function loadQuestions(page = 1) {
+        currentPage = page;
+        const params = new URLSearchParams({page, size: 20});
+        const subject = document.getElementById('filter-subject').value;
+        const chapter = document.getElementById('filter-chapter').value;
+        const source = document.getElementById('filter-source').value;
+        const diff = document.getElementById('filter-difficulty').value;
+        if (subject) params.set('subject_id', subject);
+        if (chapter) params.set('chapter_id', chapter);
+        if (source) params.set('source', source);
+        if (diff) params.set('difficulty', diff);
+
+        const data = await api(`/api/questions?${params}`);
+        const list = document.getElementById('question-list');
+        document.getElementById('result-count').textContent = `共 ${data.total} 題`;
+
+        if (data.data.length === 0) {
+            list.innerHTML = `
+                <div class="glass-card p-16 text-center">
+                    <svg class="w-20 h-20 mx-auto mb-4 empty-illustration" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                    <p class="text-gray-400 text-sm">目前沒有符合條件的題目</p>
+                    <button onclick="showSection('upload')" class="mt-4 text-brand-500 text-sm font-medium hover:text-brand-700">前往新增題目</button>
+                </div>`;
+            document.getElementById('pagination').innerHTML = '';
+            return;
+        }
+
+        list.innerHTML = data.data.map(q => renderQuestionCard(q)).join('');
+
+        // Pagination
+        const totalPages = Math.ceil(data.total / 20);
+        const pag = document.getElementById('pagination');
+        if (totalPages <= 1) { pag.innerHTML = ''; return; }
+        let html = '';
+        if (currentPage > 1) html += `<button onclick="loadQuestions(${currentPage-1})" class="px-3 py-1.5 rounded-lg text-sm bg-white border border-gray-200 hover:bg-gray-50 text-gray-500">&laquo;</button>`;
+        for (let i = 1; i <= totalPages; i++) {
+            html += `<button onclick="loadQuestions(${i})" class="px-3 py-1.5 rounded-lg text-sm font-medium ${i === page ? 'text-white shadow-md' : 'bg-white border border-gray-200 hover:bg-gray-50 text-gray-500'}" ${i === page ? 'style="background:linear-gradient(135deg,#3b82f6,#8b5cf6)"' : ''}>${i}</button>`;
+        }
+        if (currentPage < totalPages) html += `<button onclick="loadQuestions(${currentPage+1})" class="px-3 py-1.5 rounded-lg text-sm bg-white border border-gray-200 hover:bg-gray-50 text-gray-500">&raquo;</button>`;
+        pag.innerHTML = html;
+    }
+
+    // ── Question detail modal ──
+    async function openQuestion(id) {
+        const q = await api(`/api/questions/${id}`);
+        const modal = document.getElementById('modal');
+        const content = document.getElementById('modal-content');
+
+        let optionsHtml = '';
+        if (q.options) {
+            optionsHtml = `<div class="space-y-2 mt-4">${q.options.map((o,i) => {
+                const letter = o.charAt(0);
+                const isCorrect = letter === q.answer;
+                return `<div class="flex items-center gap-3 border-2 ${isCorrect ? 'border-emerald-200 bg-emerald-50/50' : 'border-gray-100'} rounded-xl px-4 py-3 text-sm">
+                    <span class="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${isCorrect ? 'bg-emerald-500 text-white' : 'bg-gray-100 text-gray-500'}">${letter}</span>
+                    <span class="text-gray-700">${escHtml(o.substring(2).trim())}</span>
+                    ${isCorrect ? '<svg class="w-4 h-4 text-emerald-500 ml-auto shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>' : ''}
+                </div>`;
+            }).join('')}</div>`;
+        }
+
+        let aiHtml = '';
+        if (q.ai_contents && q.ai_contents.length > 0) {
+            aiHtml = q.ai_contents.map(c => {
+                if (c.type === 'story') return `
+                    <div class="mt-5 p-5 rounded-xl border-2 border-amber-100" style="background:linear-gradient(135deg,#fffbeb,#fef3c7);">
+                        <div class="flex items-center gap-2 mb-3">
+                            <div class="w-7 h-7 rounded-lg flex items-center justify-center bg-amber-400 text-white text-xs font-bold">S</div>
+                            <h4 class="font-semibold text-amber-800 text-sm">AI 故事解說</h4>
+                        </div>
+                        <p class="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">${escHtml(c.content)}</p>
+                    </div>`;
+                if (c.type === 'diagram') return `
+                    <div class="mt-5 p-5 rounded-xl border-2 border-purple-100" style="background:linear-gradient(135deg,#faf5ff,#f3e8ff);">
+                        <div class="flex items-center gap-2 mb-3">
+                            <div class="w-7 h-7 rounded-lg flex items-center justify-center bg-purple-500 text-white text-xs font-bold">D</div>
+                            <h4 class="font-semibold text-purple-800 text-sm">AI 概念圖解</h4>
+                        </div>
+                        <div class="mermaid-render" data-chart="${escAttr(c.content)}"></div>
+                    </div>`;
+                return '';
+            }).join('');
+        }
+
+        content.innerHTML = `
+            <div class="space-y-4">
+                <!-- Header -->
+                <div class="flex gap-2 flex-wrap items-center">
+                    ${q.source ? `<span class="tag-pill bg-brand-50 text-brand-600 font-semibold">${escHtml(q.source)}</span>` : ''}
+                    <span class="diff-badge diff-${q.difficulty}">${diffLabels[q.difficulty]}</span>
+                    ${q.tags.map(t => `<span class="tag-pill bg-gray-100 text-gray-500">${escHtml(t)}</span>`).join('')}
+                </div>
+
+                <!-- Question content -->
+                <div class="text-gray-800 whitespace-pre-wrap leading-relaxed text-[15px]">${escHtml(q.content)}</div>
+
+                <!-- Options -->
+                ${optionsHtml}
+
+                <!-- Explanation -->
+                ${q.explanation ? `
+                <div class="mt-4 p-4 bg-gray-50 rounded-xl border border-gray-100">
+                    <p class="text-xs font-semibold text-gray-400 mb-2">詳解</p>
+                    <p class="text-sm text-gray-600 leading-relaxed whitespace-pre-wrap">${escHtml(q.explanation)}</p>
+                </div>` : ''}
+
+                <!-- AI content -->
+                ${aiHtml}
+
+                <!-- AI Action buttons -->
+                <div class="flex gap-2 mt-5 pt-4 border-t border-gray-100 flex-wrap">
+                    <button onclick="generateAI(${q.id}, 'story')" class="ai-btn bg-amber-50 text-amber-700 hover:bg-amber-100">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>
+                        故事解說
+                    </button>
+                    <button onclick="generateAI(${q.id}, 'diagram')" class="ai-btn bg-purple-50 text-purple-700 hover:bg-purple-100">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zm0 8a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zm12 0a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z"/></svg>
+                        概念圖解
+                    </button>
+                    <button onclick="generateAI(${q.id}, 'hint')" class="ai-btn bg-sky-50 text-sky-700 hover:bg-sky-100">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/></svg>
+                        給我提示
+                    </button>
+                    <button onclick="generateAI(${q.id}, 'similar')" class="ai-btn bg-emerald-50 text-emerald-700 hover:bg-emerald-100">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+                        出類似題
+                    </button>
+                    <button onclick="generateAudio(${q.id})" class="ai-btn bg-rose-50 text-rose-700 hover:bg-rose-100">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"/></svg>
+                        語音解說
+                    </button>
+                </div>
+                <div id="ai-result" class="mt-3"></div>
+            </div>
+        `;
+        modal.classList.remove('hidden');
+
+        // Render mermaid
+        document.querySelectorAll('.mermaid-render').forEach(async (el) => {
+            const chart = el.dataset.chart;
+            try {
+                const { svg } = await mermaid.render('mermaid-' + Math.random().toString(36).slice(2), chart);
+                el.innerHTML = svg;
+            } catch(e) { el.innerHTML = `<pre class="text-xs text-red-400">${e.message}</pre>`; }
+        });
+    }
+
+    async function generateAI(qid, type) {
+        const result = document.getElementById('ai-result');
+        result.innerHTML = `
+            <div class="flex items-center gap-3 p-4 rounded-xl bg-gray-50 border border-gray-100">
+                <div class="w-5 h-5 border-2 border-brand-500 border-t-transparent rounded-full animate-spin"></div>
+                <span class="text-sm text-gray-500">AI 正在生成中...</span>
+            </div>`;
+        try {
+            const data = await api(`/api/questions/${qid}/generate`, {
+                method: 'POST', body: JSON.stringify({content_type: type}),
+            });
+            if (type === 'hint') {
+                result.innerHTML = `
+                    <div class="p-5 rounded-xl border-2 border-sky-100" style="background:linear-gradient(135deg,#f0f9ff,#e0f2fe);">
+                        <div class="flex items-center gap-2 mb-3">
+                            <div class="w-7 h-7 rounded-lg flex items-center justify-center bg-sky-500 text-white text-xs font-bold">H</div>
+                            <h4 class="font-semibold text-sky-800 text-sm">提示</h4>
+                        </div>
+                        <p class="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">${escHtml(data.hint)}</p>
+                    </div>`;
+            } else if (type === 'story') {
+                result.innerHTML = `
+                    <div class="p-5 rounded-xl border-2 border-amber-100" style="background:linear-gradient(135deg,#fffbeb,#fef3c7);">
+                        <div class="flex items-center gap-2 mb-3">
+                            <div class="w-7 h-7 rounded-lg flex items-center justify-center bg-amber-400 text-white text-xs font-bold">S</div>
+                            <h4 class="font-semibold text-amber-800 text-sm">故事解說</h4>
+                        </div>
+                        <p class="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">${escHtml(data.content)}</p>
+                    </div>`;
+            } else if (type === 'diagram') {
+                result.innerHTML = `
+                    <div class="p-5 rounded-xl border-2 border-purple-100" style="background:linear-gradient(135deg,#faf5ff,#f3e8ff);">
+                        <div class="flex items-center gap-2 mb-3">
+                            <div class="w-7 h-7 rounded-lg flex items-center justify-center bg-purple-500 text-white text-xs font-bold">D</div>
+                            <h4 class="font-semibold text-purple-800 text-sm">概念圖解</h4>
+                        </div>
+                        <div id="new-diagram"></div>
+                    </div>`;
+                try {
+                    const { svg } = await mermaid.render('md-' + Date.now(), data.content);
+                    document.getElementById('new-diagram').innerHTML = svg;
+                } catch(e) { document.getElementById('new-diagram').innerHTML = `<pre class="text-xs bg-white p-3 rounded-lg">${escHtml(data.content)}</pre>`; }
+            } else if (type === 'similar') {
+                const sq = data.similar_question;
+                result.innerHTML = `
+                    <div class="p-5 rounded-xl border-2 border-emerald-100" style="background:linear-gradient(135deg,#ecfdf5,#d1fae5);">
+                        <div class="flex items-center gap-2 mb-3">
+                            <div class="w-7 h-7 rounded-lg flex items-center justify-center bg-emerald-500 text-white text-xs font-bold">Q</div>
+                            <h4 class="font-semibold text-emerald-800 text-sm">類似題目</h4>
+                        </div>
+                        <p class="text-sm text-gray-800 mb-3 leading-relaxed">${escHtml(sq.content)}</p>
+                        ${sq.options ? `<div class="space-y-1.5 mb-3">${sq.options.map(o => `<div class="text-sm text-gray-600 pl-2">${escHtml(o)}</div>`).join('')}</div>` : ''}
+                        <div class="pt-3 border-t border-emerald-200">
+                            <p class="text-xs text-emerald-700"><strong>答案：</strong>${escHtml(sq.answer)}</p>
+                            ${sq.explanation ? `<p class="text-xs text-emerald-600 mt-1">${escHtml(sq.explanation)}</p>` : ''}
+                        </div>
+                    </div>`;
+            }
+        } catch (e) {
+            result.innerHTML = `
+                <div class="p-4 rounded-xl bg-red-50 border border-red-100">
+                    <p class="text-sm text-red-500">生成失敗: ${escHtml(e.message)}</p>
+                </div>`;
+        }
+    }
+
+    function closeModal() { document.getElementById('modal').classList.add('hidden'); }
+
+    // ── Practice mode ──
+    let practiceQuestions = [];
+    let practiceIndex = 0;
+    let practiceScore = 0;
+
+    async function startPractice() {
+        const subjectId = document.getElementById('practice-subject').value;
+        const count = document.querySelector('input[name="pcount"]:checked').value;
+        const data = await api(`/api/questions?subject_id=${subjectId}&size=${count}`);
+        if (data.data.length === 0) {
+            alert('此科目尚無題目');
+            return;
+        }
+        practiceQuestions = data.data.sort(() => Math.random() - 0.5);
+        practiceIndex = 0;
+        practiceScore = 0;
+        document.getElementById('practice-setup').classList.add('hidden');
+        document.getElementById('practice-area').classList.remove('hidden');
+        showPracticeQuestion();
+    }
+
+    function showPracticeQuestion() {
+        const area = document.getElementById('practice-area');
+        if (practiceIndex >= practiceQuestions.length) {
+            const pct = Math.round(practiceScore / practiceQuestions.length * 100);
+            const color = pct >= 80 ? '#22c55e' : pct >= 60 ? '#f97316' : '#ef4444';
+            area.innerHTML = `
+                <div class="glass-card p-10 text-center max-w-lg mx-auto slide-up">
+                    <div class="w-20 h-20 mx-auto rounded-full flex items-center justify-center mb-5" style="background:${color}20;">
+                        <span class="text-3xl font-bold" style="color:${color}">${pct}%</span>
+                    </div>
+                    <h2 class="text-xl font-bold text-gray-800 mb-1">練習完成！</h2>
+                    <p class="text-gray-400 text-sm mb-6">答對 ${practiceScore} / ${practiceQuestions.length} 題</p>
+                    <div class="flex gap-3 justify-center">
+                        <button onclick="document.getElementById('practice-setup').classList.remove('hidden');document.getElementById('practice-area').classList.add('hidden');"
+                            class="px-6 py-2.5 rounded-xl text-sm font-semibold text-white" style="background:linear-gradient(135deg,#3b82f6,#8b5cf6);">再練一次</button>
+                        <button onclick="showSection('browse')" class="px-6 py-2.5 rounded-xl text-sm font-semibold border-2 border-gray-200 text-gray-500 hover:bg-gray-50">
+                            瀏覽題庫
+                        </button>
+                    </div>
+                </div>`;
+            return;
+        }
+        const q = practiceQuestions[practiceIndex];
+        const progress = ((practiceIndex) / practiceQuestions.length * 100).toFixed(0);
+        area.innerHTML = `
+            <div class="max-w-2xl mx-auto slide-up">
+                <!-- Progress bar -->
+                <div class="mb-4">
+                    <div class="flex justify-between items-center mb-2">
+                        <span class="text-xs text-gray-400 font-medium">第 ${practiceIndex + 1} / ${practiceQuestions.length} 題</span>
+                        <span class="diff-badge diff-${q.difficulty}">${diffLabels[q.difficulty]}</span>
+                    </div>
+                    <div class="w-full bg-gray-200 rounded-full h-2">
+                        <div class="h-2 rounded-full transition-all duration-500" style="width:${progress}%;background:linear-gradient(90deg,#3b82f6,#8b5cf6);"></div>
+                    </div>
+                </div>
+                <!-- Question card -->
+                <div class="glass-card p-6">
+                    <p class="text-gray-800 whitespace-pre-wrap leading-relaxed mb-5">${escHtml(q.content)}</p>
+                    ${q.options ? `<div class="space-y-2.5">
+                        ${q.options.map((o, i) => `
+                            <button onclick="checkAnswer(this, '${o.charAt(0)}', '${q.answer}')"
+                                class="option-btn w-full text-left px-4 py-3 text-sm flex items-center gap-3">
+                                <span class="w-7 h-7 rounded-full bg-gray-100 flex items-center justify-center text-xs font-bold text-gray-500 shrink-0">${o.charAt(0)}</span>
+                                <span>${escHtml(o.substring(2).trim())}</span>
+                            </button>`).join('')}
+                    </div>` : `
+                    <div class="flex gap-2">
+                        <input id="fill-answer" class="form-input flex-1" placeholder="輸入你的答案" autofocus>
+                        <button onclick="checkFillAnswer('${escAttr(q.answer)}')" class="px-5 py-2 rounded-xl text-white text-sm font-semibold" style="background:linear-gradient(135deg,#3b82f6,#8b5cf6);">送出</button>
+                    </div>`}
+                    <div id="practice-feedback" class="mt-4 hidden"></div>
+                </div>
+            </div>`;
+    }
+
+    function checkAnswer(btn, selected, correct) {
+        const buttons = btn.parentElement.querySelectorAll('button');
+        buttons.forEach(b => {
+            b.disabled = true;
+            b.style.cursor = 'default';
+            const letter = b.querySelector('span').textContent.trim();
+            if (letter === correct) {
+                b.classList.add('option-correct');
+                b.querySelector('span:first-child').className = 'w-7 h-7 rounded-full bg-emerald-500 flex items-center justify-center text-xs font-bold text-white shrink-0';
+            }
+        });
+        if (selected === correct) {
+            btn.classList.add('option-correct');
+            practiceScore++;
+            showFeedback(true);
+        } else {
+            btn.classList.add('option-wrong');
+            btn.querySelector('span:first-child').className = 'w-7 h-7 rounded-full bg-red-500 flex items-center justify-center text-xs font-bold text-white shrink-0';
+            showFeedback(false);
+        }
+    }
+
+    function checkFillAnswer(correct) {
+        const input = document.getElementById('fill-answer');
+        input.disabled = true;
+        if (input.value.trim().toUpperCase() === correct.toUpperCase()) {
+            input.classList.add('border-emerald-500');
+            practiceScore++;
+            showFeedback(true);
+        } else {
+            input.classList.add('border-red-500');
+            showFeedback(false, correct);
+        }
+    }
+
+    function showFeedback(isCorrect, correctAnswer) {
+        const fb = document.getElementById('practice-feedback');
+        fb.classList.remove('hidden');
+        fb.innerHTML = `
+            <div class="flex items-center justify-between p-4 rounded-xl ${isCorrect ? 'bg-emerald-50 border border-emerald-100' : 'bg-red-50 border border-red-100'}">
+                <div class="flex items-center gap-2">
+                    ${isCorrect
+                        ? '<svg class="w-5 h-5 text-emerald-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>'
+                        : '<svg class="w-5 h-5 text-red-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>'}
+                    <span class="text-sm font-semibold ${isCorrect ? 'text-emerald-700' : 'text-red-700'}">
+                        ${isCorrect ? '答對了！' : `答錯了${correctAnswer ? '，正確答案：' + escHtml(correctAnswer) : ''}`}
+                    </span>
+                </div>
+                <button onclick="practiceIndex++;showPracticeQuestion()" class="px-4 py-1.5 rounded-lg text-white text-sm font-semibold" style="background:linear-gradient(135deg,#3b82f6,#8b5cf6);">
+                    ${practiceIndex < practiceQuestions.length - 1 ? '下一題' : '查看結果'}
+                </button>
+            </div>`;
+    }
+
+    // ── Upload question ──
+    async function submitQuestion(e) {
+        e.preventDefault();
+        const optionsText = document.getElementById('q-options').value.trim();
+        const options = optionsText ? optionsText.split('\n').filter(l => l.trim()) : null;
+        const tags = document.getElementById('q-tags').value.trim();
+        const body = {
+            chapter_id: document.getElementById('q-chapter').value || null,
+            source: document.getElementById('q-source').value || null,
+            question_type: document.getElementById('q-type').value,
+            difficulty: parseInt(document.getElementById('q-difficulty').value),
+            content: document.getElementById('q-content').value,
+            options: options,
+            answer: document.getElementById('q-answer').value,
+            explanation: document.getElementById('q-explanation').value || null,
+            tag_names: tags ? tags.split(/[,，]/).map(t => t.trim()).filter(Boolean) : [],
+        };
+        try {
+            const res = await api('/api/questions', {method: 'POST', body: JSON.stringify(body)});
+            document.getElementById('upload-msg').innerHTML = `
+                <div class="p-3 rounded-xl bg-emerald-50 border border-emerald-100 flex items-center gap-2">
+                    <svg class="w-4 h-4 text-emerald-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+                    <span class="text-emerald-700 font-medium">題目已儲存 (ID: ${res.id})</span>
+                </div>`;
+            e.target.reset();
+        } catch (err) {
+            document.getElementById('upload-msg').innerHTML = `
+                <div class="p-3 rounded-xl bg-red-50 border border-red-100">
+                    <span class="text-red-600">儲存失敗: ${escHtml(err.message)}</span>
+                </div>`;
+        }
+    }
+
+    // ── Utils ──
+    function escHtml(s) { if(!s) return ''; const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+    function escAttr(s) { if(!s) return ''; return s.replace(/'/g, "\\'").replace(/"/g, '&quot;'); }
+
+    // ── Scan / OCR ──
+    let scanBase64 = null;
+
+    function handleScanFile(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const dataUrl = e.target.result;
+            scanBase64 = dataUrl.split(',')[1]; // strip data:image/...;base64,
+            document.getElementById('scan-preview').src = dataUrl;
+            document.getElementById('scan-preview-container').classList.remove('hidden');
+            document.getElementById('scan-placeholder').classList.add('hidden');
+            document.getElementById('scan-btn').disabled = false;
+            document.getElementById('scan-result').classList.add('hidden');
+        };
+        reader.readAsDataURL(file);
+    }
+
+    function clearScanPreview() {
+        scanBase64 = null;
+        document.getElementById('scan-preview-container').classList.add('hidden');
+        document.getElementById('scan-placeholder').classList.remove('hidden');
+        document.getElementById('scan-btn').disabled = true;
+        document.getElementById('scan-file-input').value = '';
+        document.getElementById('scan-result').classList.add('hidden');
+    }
+
+    async function submitScan() {
+        if (!scanBase64) return;
+        document.getElementById('scan-btn').disabled = true;
+        document.getElementById('scan-loading').classList.remove('hidden');
+        document.getElementById('scan-result').classList.add('hidden');
+        try {
+            const data = await api('/api/ocr', {
+                method: 'POST',
+                body: JSON.stringify({ image: scanBase64 }),
+            });
+            // Fill result fields
+            document.getElementById('scan-content').value = data.content || '';
+            document.getElementById('scan-options').value = (data.options || []).join('\n');
+            document.getElementById('scan-answer').value = data.answer || '';
+            document.getElementById('scan-subject').value = data.subject_hint || '';
+            document.getElementById('scan-difficulty').value = data.difficulty || 3;
+            document.getElementById('scan-result').classList.remove('hidden');
+        } catch (e) {
+            document.getElementById('scan-result').classList.remove('hidden');
+            document.getElementById('scan-save-msg').innerHTML = `
+                <div class="p-3 rounded-xl bg-red-50 border border-red-100">
+                    <span class="text-red-600">辨識失敗: ${escHtml(e.message)}</span>
+                </div>`;
+        }
+        document.getElementById('scan-loading').classList.add('hidden');
+        document.getElementById('scan-btn').disabled = false;
+    }
+
+    async function saveScanResult() {
+        const content = document.getElementById('scan-content').value;
+        const optionsText = document.getElementById('scan-options').value.trim();
+        const options = optionsText ? optionsText.split('\n').filter(l => l.trim()) : null;
+        const body = {
+            content: content,
+            options: options,
+            answer: document.getElementById('scan-answer').value,
+            difficulty: parseInt(document.getElementById('scan-difficulty').value) || 3,
+            question_type: options && options.length > 0 ? 'single_choice' : 'fill',
+            source: 'OCR 拍照匯入',
+            tag_names: [],
+        };
+        try {
+            const res = await api('/api/questions', { method: 'POST', body: JSON.stringify(body) });
+            document.getElementById('scan-save-msg').innerHTML = `
+                <div class="p-3 rounded-xl bg-emerald-50 border border-emerald-100 flex items-center gap-2">
+                    <svg class="w-4 h-4 text-emerald-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+                    <span class="text-emerald-700 font-medium">已儲存到題庫 (ID: ${res.id})</span>
+                </div>`;
+        } catch (e) {
+            document.getElementById('scan-save-msg').innerHTML = `
+                <div class="p-3 rounded-xl bg-red-50 border border-red-100">
+                    <span class="text-red-600">儲存失敗: ${escHtml(e.message)}</span>
+                </div>`;
+        }
+    }
+
+    async function generateScanStory() {
+        const content = document.getElementById('scan-content').value;
+        const answer = document.getElementById('scan-answer').value;
+        const container = document.getElementById('scan-story-result');
+        container.innerHTML = `
+            <div class="flex items-center gap-3 p-4 rounded-xl bg-amber-50 border border-amber-100">
+                <div class="w-5 h-5 border-2 border-amber-500 border-t-transparent rounded-full animate-spin"></div>
+                <span class="text-sm text-amber-700">AI 正在產生故事解說...</span>
+            </div>`;
+        try {
+            // Save question first if not saved, then generate
+            const saveRes = await api('/api/questions', {
+                method: 'POST',
+                body: JSON.stringify({ content, options: null, answer, difficulty: 3, question_type: 'fill', source: 'OCR 拍照匯入', tag_names: [] }),
+            });
+            const genRes = await api(`/api/questions/${saveRes.id}/generate`, {
+                method: 'POST',
+                body: JSON.stringify({ content_type: 'story' }),
+            });
+            container.innerHTML = `
+                <div class="p-5 rounded-xl border-2 border-amber-100" style="background:linear-gradient(135deg,#fffbeb,#fef3c7);">
+                    <div class="flex items-center gap-2 mb-3">
+                        <div class="w-7 h-7 rounded-lg flex items-center justify-center bg-amber-400 text-white text-xs font-bold">S</div>
+                        <h4 class="font-semibold text-amber-800 text-sm">AI 故事解說</h4>
+                    </div>
+                    <p class="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">${escHtml(genRes.content)}</p>
+                </div>`;
+        } catch (e) {
+            container.innerHTML = `<div class="p-3 rounded-xl bg-red-50 border border-red-100"><span class="text-red-600 text-sm">生成失敗: ${escHtml(e.message)}</span></div>`;
+        }
+    }
+
+    // ── Audio Generation ──
+    async function generateAudio(qid) {
+        const result = document.getElementById('ai-result');
+        result.innerHTML = `
+            <div class="flex items-center gap-3 p-4 rounded-xl bg-rose-50 border border-rose-100">
+                <div class="w-5 h-5 border-2 border-rose-500 border-t-transparent rounded-full animate-spin"></div>
+                <span class="text-sm text-rose-600">正在生成語音解說...</span>
+            </div>`;
+        try {
+            const data = await api(`/api/questions/${qid}/audio`, { method: 'POST' });
+            result.innerHTML = `
+                <div class="p-5 rounded-xl border-2 border-rose-100" style="background:linear-gradient(135deg,#fff1f2,#ffe4e6);">
+                    <div class="flex items-center gap-2 mb-3">
+                        <div class="w-7 h-7 rounded-lg flex items-center justify-center bg-rose-500 text-white text-xs font-bold">A</div>
+                        <h4 class="font-semibold text-rose-800 text-sm">語音解說</h4>
+                    </div>
+                    <audio controls class="w-full" style="border-radius:12px;">
+                        <source src="${data.audio_url}" type="audio/mpeg">
+                        您的瀏覽器不支援音頻播放
+                    </audio>
+                </div>`;
+        } catch (e) {
+            result.innerHTML = `<div class="p-3 rounded-xl bg-red-50 border border-red-100"><span class="text-red-600 text-sm">語音生成失敗: ${escHtml(e.message)}</span></div>`;
+        }
+    }
+
+    // ── PWA Service Worker Registration ──
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('/sw.js').catch(err => console.log('SW registration failed:', err));
+    }
+
+    // ── Init ──
+    loadSubjects();
+    loadAllSubjectSelects();
+    loadDashboard();
+    </script>
+</body>
+</html>
