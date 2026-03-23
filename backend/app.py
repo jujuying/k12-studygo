@@ -297,18 +297,23 @@ def generate_ai_content(question_id: int, req: AIGenerateRequest, db=Depends(get
 
     from ai_service import generate_story, generate_diagram, generate_hint, generate_similar_question
 
-    if req.content_type == "story":
-        content = generate_story(q.content, q.answer, q.explanation or "")
-    elif req.content_type == "diagram":
-        content = generate_diagram(q.content, q.answer)
-    elif req.content_type == "hint":
-        content = generate_hint(q.content)
-        return {"hint": content}  # hints are not saved
-    elif req.content_type == "similar":
-        result = generate_similar_question(q.content, q.answer)
-        return {"similar_question": result}  # not saved
-    else:
-        raise HTTPException(400, f"Unknown content_type: {req.content_type}")
+    try:
+        if req.content_type == "story":
+            content = generate_story(q.content, q.answer, q.explanation or "")
+        elif req.content_type == "diagram":
+            content = generate_diagram(q.content, q.answer)
+        elif req.content_type == "hint":
+            content = generate_hint(q.content)
+            return {"hint": content}
+        elif req.content_type == "similar":
+            result = generate_similar_question(q.content, q.answer)
+            return {"similar_question": result}
+        else:
+            raise HTTPException(400, f"Unknown content_type: {req.content_type}")
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(500, f"AI generation failed: {type(e).__name__}: {e}")
 
     # Save to DB (story / diagram)
     ai = AIContent(
