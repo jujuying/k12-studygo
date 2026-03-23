@@ -147,6 +147,61 @@ def bulk_create_questions(data: QuestionBulkCreate, db=Depends(get_db)):
     return {"count": len(ids), "ids": ids}
 
 
+@app.post("/api/seed")
+def seed_sample_data(db=Depends(get_db)):
+    """One-click seed sample questions."""
+    if db.query(Question).count() > 0:
+        return {"msg": "Already seeded", "count": db.query(Question).count()}
+
+    math = db.query(Subject).filter(Subject.name == "數學A", Subject.level == "senior").first()
+    if not math:
+        return {"msg": "Subject not found"}
+
+    chapters_data = [
+        "第一章 數與式", "第二章 多項式", "第三章 指數與對數",
+        "第四章 三角函數", "第五章 排列組合", "第六章 機率與統計",
+        "第七章 向量",
+    ]
+    chapters = {}
+    for i, name in enumerate(chapters_data):
+        ch = db.query(Chapter).filter(Chapter.name == name, Chapter.subject_id == math.id).first()
+        if not ch:
+            ch = Chapter(subject_id=math.id, name=name, sort_order=i + 1)
+            db.add(ch)
+            db.flush()
+        chapters[name] = ch
+
+    samples = [
+        {"ch": "第四章 三角函數", "src": "113學測", "content": "若 sin θ = 3/5，且 θ 為第二象限角，則 cos θ 之值為何？", "opts": ["A. 4/5", "B. -4/5", "C. 3/4", "D. -3/4"], "ans": "B", "exp": "由 sin²θ + cos²θ = 1，得 cos²θ = 1 - 9/25 = 16/25，cos θ = ±4/5。因 θ 在第二象限，cos θ < 0，故 cos θ = -4/5。", "diff": 2, "tags": ["三角函數", "畢氏定理"]},
+        {"ch": "第五章 排列組合", "src": "113學測", "content": "將 MATH 四個字母全部排成一列，共有幾種排法？", "opts": ["A. 12", "B. 24", "C. 48", "D. 6"], "ans": "B", "exp": "4個相異字母的排列數 = 4! = 4 × 3 × 2 × 1 = 24", "diff": 1, "tags": ["排列", "階乘"]},
+        {"ch": "第三章 指數與對數", "src": "112學測", "content": "若 log₂x = 3，則 x 之值為何？", "opts": ["A. 6", "B. 8", "C. 9", "D. 12"], "ans": "B", "exp": "log₂x = 3 表示 2³ = x，故 x = 8。", "diff": 1, "tags": ["對數", "指數"]},
+        {"ch": "第六章 機率與統計", "src": "112學測", "content": "擲一公正骰子兩次，兩次點數和為 7 的機率為何？", "opts": ["A. 1/6", "B. 5/36", "C. 1/12", "D. 7/36"], "ans": "A", "exp": "總共 36 種等機率結果。和為 7 的組合：(1,6)(2,5)(3,4)(4,3)(5,2)(6,1) 共 6 種。機率 = 6/36 = 1/6。", "diff": 2, "tags": ["機率", "古典機率"]},
+        {"ch": "第一章 數與式", "src": "113學測", "content": "設 a, b 為實數，若 |a - 3| + |b + 2| = 0，則 a + b = ？", "opts": ["A. 1", "B. -1", "C. 5", "D. -5"], "ans": "A", "exp": "因為絕對值 ≥ 0，兩個非負數之和為 0，必須兩者都為 0。故 a - 3 = 0 且 b + 2 = 0，得 a = 3, b = -2，a + b = 1。", "diff": 2, "tags": ["絕對值", "實數"]},
+        {"ch": "第二章 多項式", "src": "111學測", "content": "多項式 f(x) = x³ - 2x² - 5x + 6 的一個根為 x = 1，則 f(x) 可分解為？", "opts": ["A. (x-1)(x+2)(x-3)", "B. (x-1)(x-2)(x+3)", "C. (x+1)(x-2)(x-3)", "D. (x-1)(x-2)(x-3)"], "ans": "A", "exp": "f(1) = 1 - 2 - 5 + 6 = 0 確認。以 (x-1) 做綜合除法得 x² - x - 6 = (x+2)(x-3)。故 f(x) = (x-1)(x+2)(x-3)。", "diff": 3, "tags": ["多項式", "因式分解", "綜合除法"]},
+        {"ch": "第七章 向量", "src": "112學測", "content": "若向量 a = (2, 3)，b = (1, -1)，則 a · b = ？", "opts": ["A. -1", "B. 1", "C. 5", "D. -5"], "ans": "A", "exp": "a · b = 2×1 + 3×(-1) = 2 - 3 = -1", "diff": 1, "tags": ["向量", "內積"]},
+        {"ch": "第四章 三角函數", "src": "111學測", "content": "在△ABC中，若 A = 60°, b = 4, c = 5，則 a = ？", "opts": ["A. √21", "B. √41", "C. √61", "D. √81"], "ans": "A", "exp": "由餘弦定理 a² = b² + c² - 2bc·cos A = 16 + 25 - 2(4)(5)(1/2) = 41 - 20 = 21，故 a = √21。", "diff": 3, "tags": ["三角函數", "餘弦定理"]},
+    ]
+
+    count = 0
+    for s in samples:
+        q = Question(
+            chapter_id=chapters[s["ch"]].id, source=s["src"], question_type="single_choice",
+            difficulty=s["diff"], content=s["content"],
+            options=json.dumps(s["opts"], ensure_ascii=False), answer=s["ans"], explanation=s["exp"],
+        )
+        for tag_name in s["tags"]:
+            tag = db.query(Tag).filter(Tag.name == tag_name).first()
+            if not tag:
+                tag = Tag(name=tag_name)
+                db.add(tag)
+                db.flush()
+            q.tags.append(tag)
+        db.add(q)
+        count += 1
+    db.commit()
+    return {"msg": "Seeded", "count": count}
+
+
 @app.get("/api/stats")
 def get_stats(db=Depends(get_db)):
     total_questions = db.query(Question).count()
