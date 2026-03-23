@@ -1,7 +1,7 @@
 """K12 Course Review System - FastAPI Backend."""
 import os
 from dotenv import load_dotenv
-load_dotenv(os.path.join(os.path.dirname(__file__), "..", ".env"))
+load_dotenv(os.path.join(os.path.dirname(__file__), "..", ".env"), override=False)
 
 import asyncio
 import base64
