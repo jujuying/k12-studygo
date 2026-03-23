@@ -202,6 +202,15 @@ def seed_sample_data(db=Depends(get_db)):
     return {"msg": "Seeded", "count": count}
 
 
+@app.get("/api/debug")
+def debug_env():
+    key = os.environ.get("ANTHROPIC_API_KEY", "")
+    return {
+        "key_set": bool(key),
+        "key_prefix": key[:12] + "..." if len(key) > 12 else "(empty)",
+    }
+
+
 @app.get("/api/stats")
 def get_stats(db=Depends(get_db)):
     total_questions = db.query(Question).count()
