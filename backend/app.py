@@ -1,16 +1,21 @@
 """K12 Course Review System - FastAPI Backend."""
+import os
+from dotenv import load_dotenv
+load_dotenv(os.path.join(os.path.dirname(__file__), "..", ".env"))
+
 import asyncio
 import base64
 import json
+import random
 from contextlib import asynccontextmanager
+from datetime import datetime, timedelta
 from fastapi import FastAPI, HTTPException, Query, Depends, File, UploadFile
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse, FileResponse
 from pydantic import BaseModel
 from typing import Optional
 from database import SessionLocal, init_db, Subject, Chapter, Tag, Question, AIContent, Student, Attempt, question_tags
-from sqlalchemy import func
-import os
+from sqlalchemy import func, cast, Date
 
 
 @asynccontextmanager
@@ -64,6 +69,22 @@ class StudentCreate(BaseModel):
     name: str
     grade: int
     email: Optional[str] = None
+
+class QuestionUpdate(BaseModel):
+    chapter_id: Optional[int] = None
+    source: Optional[str] = None
+    question_type: Optional[str] = None
+    difficulty: Optional[int] = None
+    content: Optional[str] = None
+    options: Optional[list[str]] = None
+    answer: Optional[str] = None
+    explanation: Optional[str] = None
+    image_url: Optional[str] = None
+    tag_names: Optional[list[str]] = None
+
+class SubjectCreate(BaseModel):
+    name: str
+    level: str  # junior / senior
 
 class AIGenerateRequest(BaseModel):
     content_type: str  # story / diagram / hint / similar
@@ -487,6 +508,353 @@ async def generate_question_audio(question_id: int, db=Depends(get_db)):
     db.commit()
 
     return {"audio_url": f"/{audio_path}"}
+
+
+# ── Question Update & Delete ──────────────────────────────────────
+
+@app.put("/api/questions/{question_id}")
+def update_question(question_id: int, data: QuestionUpdate, db=Depends(get_db)):
+    q = db.query(Question).filter(Question.id == question_id).first()
+    if not q:
+        raise HTTPException(404, "Question not found")
+
+    if data.content is not None:
+        q.content = data.content
+    if data.answer is not None:
+        q.answer = data.answer
+    if data.explanation is not None:
+        q.explanation = data.explanation
+    if data.chapter_id is not None:
+        q.chapter_id = data.chapter_id
+    if data.source is not None:
+        q.source = data.source
+    if data.question_type is not None:
+        q.question_type = data.question_type
+    if data.difficulty is not None:
+        q.difficulty = data.difficulty
+    if data.image_url is not None:
+        q.image_url = data.image_url
+    if data.options is not None:
+        q.options = json.dumps(data.options, ensure_ascii=False)
+    if data.tag_names is not None:
+        q.tags.clear()
+        for tag_name in data.tag_names:
+            tag = db.query(Tag).filter(Tag.name == tag_name).first()
+            if not tag:
+                tag = Tag(name=tag_name)
+                db.add(tag)
+                db.flush()
+            q.tags.append(tag)
+
+    db.commit()
+    return {"id": q.id, "msg": "Updated"}
+
+
+@app.delete("/api/questions/{question_id}")
+def delete_question(question_id: int, db=Depends(get_db)):
+    q = db.query(Question).filter(Question.id == question_id).first()
+    if not q:
+        raise HTTPException(404, "Question not found")
+    # Delete related AI contents and attempts
+    db.query(AIContent).filter(AIContent.question_id == question_id).delete()
+    db.query(Attempt).filter(Attempt.question_id == question_id).delete()
+    q.tags.clear()
+    db.delete(q)
+    db.commit()
+    return {"msg": "Deleted"}
+
+
+# ── Subject Management ────────────────────────────────────────────
+
+@app.post("/api/subjects")
+def create_subject(data: SubjectCreate, db=Depends(get_db)):
+    existing = db.query(Subject).filter(
+        Subject.name == data.name, Subject.level == data.level
+    ).first()
+    if existing:
+        raise HTTPException(400, f"Subject '{data.name}' ({data.level}) already exists")
+    s = Subject(name=data.name, level=data.level)
+    db.add(s)
+    db.commit()
+    return {"id": s.id, "name": s.name, "level": s.level}
+
+
+# ── Tags ──────────────────────────────────────────────────────────
+
+@app.get("/api/tags")
+def list_tags(db=Depends(get_db)):
+    tags = db.query(
+        Tag.id, Tag.name, func.count(question_tags.c.question_id).label("count")
+    ).outerjoin(question_tags).group_by(Tag.id).order_by(func.count(question_tags.c.question_id).desc()).all()
+    return [{"id": t.id, "name": t.name, "count": t.count} for t in tags]
+
+
+@app.delete("/api/tags/{tag_id}")
+def delete_tag(tag_id: int, db=Depends(get_db)):
+    tag = db.query(Tag).filter(Tag.id == tag_id).first()
+    if not tag:
+        raise HTTPException(404, "Tag not found")
+    tag.questions.clear()
+    db.delete(tag)
+    db.commit()
+    return {"msg": "Deleted"}
+
+
+# ── Students ──────────────────────────────────────────────────────
+
+@app.get("/api/students")
+def list_students(db=Depends(get_db)):
+    students = db.query(Student).order_by(Student.id).all()
+    return [
+        {
+            "id": s.id, "name": s.name, "grade": s.grade,
+            "email": s.email, "total_attempts": len(s.attempts),
+        }
+        for s in students
+    ]
+
+
+@app.get("/api/students/{student_id}")
+def get_student(student_id: int, db=Depends(get_db)):
+    s = db.query(Student).filter(Student.id == student_id).first()
+    if not s:
+        raise HTTPException(404, "Student not found")
+    total = len(s.attempts)
+    correct = sum(1 for a in s.attempts if a.is_correct)
+    return {
+        "id": s.id, "name": s.name, "grade": s.grade, "email": s.email,
+        "total_attempts": total,
+        "correct": correct,
+        "accuracy": round(correct / total * 100, 1) if total > 0 else 0,
+    }
+
+
+@app.put("/api/students/{student_id}")
+def update_student(student_id: int, data: StudentCreate, db=Depends(get_db)):
+    s = db.query(Student).filter(Student.id == student_id).first()
+    if not s:
+        raise HTTPException(404, "Student not found")
+    s.name = data.name
+    s.grade = data.grade
+    s.email = data.email
+    db.commit()
+    return {"id": s.id, "name": s.name}
+
+
+# ── Attempt History & Trends ──────────────────────────────────────
+
+@app.get("/api/students/{student_id}/attempts")
+def list_attempts(
+    student_id: int,
+    subject_id: Optional[int] = None,
+    page: int = 1,
+    size: int = 20,
+    db=Depends(get_db),
+):
+    q = db.query(Attempt).filter(Attempt.student_id == student_id)
+    if subject_id:
+        q = q.join(Question).join(Chapter).filter(Chapter.subject_id == subject_id)
+    total = q.count()
+    attempts = q.order_by(Attempt.created_at.desc()).offset((page - 1) * size).limit(size).all()
+    return {
+        "total": total,
+        "page": page,
+        "data": [
+            {
+                "id": a.id,
+                "question_id": a.question_id,
+                "question_content": a.question.content[:80],
+                "answer_given": a.answer_given,
+                "correct_answer": a.question.answer,
+                "is_correct": a.is_correct,
+                "time_spent": a.time_spent,
+                "created_at": a.created_at.isoformat() if a.created_at else None,
+            }
+            for a in attempts
+        ],
+    }
+
+
+@app.get("/api/students/{student_id}/trend")
+def student_trend(student_id: int, days: int = 14, db=Depends(get_db)):
+    """Daily accuracy trend for recent N days."""
+    since = datetime.now() - timedelta(days=days)
+    attempts = (
+        db.query(Attempt)
+        .filter(Attempt.student_id == student_id, Attempt.created_at >= since)
+        .all()
+    )
+    daily = {}
+    for a in attempts:
+        day = a.created_at.strftime("%Y-%m-%d") if a.created_at else "unknown"
+        if day not in daily:
+            daily[day] = {"total": 0, "correct": 0}
+        daily[day]["total"] += 1
+        if a.is_correct:
+            daily[day]["correct"] += 1
+
+    return [
+        {
+            "date": d,
+            "total": v["total"],
+            "correct": v["correct"],
+            "accuracy": round(v["correct"] / v["total"] * 100, 1),
+        }
+        for d, v in sorted(daily.items())
+    ]
+
+
+# ── Smart Practice (弱點優先) ─────────────────────────────────────
+
+@app.get("/api/practice/start")
+def start_practice(
+    student_id: int,
+    subject_id: Optional[int] = None,
+    count: int = 10,
+    mode: str = "smart",  # smart / random / weak
+    db=Depends(get_db),
+):
+    """Generate a practice set. Modes:
+    - smart: mix of weak areas (60%) + random (40%)
+    - random: purely random
+    - weak: only questions from weak tags
+    """
+    base_q = db.query(Question)
+    if subject_id:
+        base_q = base_q.join(Chapter).filter(Chapter.subject_id == subject_id)
+    all_questions = base_q.all()
+
+    if not all_questions:
+        return {"questions": [], "msg": "No questions available"}
+
+    if mode == "random":
+        selected = random.sample(all_questions, min(count, len(all_questions)))
+    else:
+        # Find weak tags for this student
+        attempts = db.query(Attempt).filter(Attempt.student_id == student_id).all()
+        tag_stats = {}
+        for att in attempts:
+            for tag in att.question.tags:
+                if tag.name not in tag_stats:
+                    tag_stats[tag.name] = {"total": 0, "correct": 0}
+                tag_stats[tag.name]["total"] += 1
+                if att.is_correct:
+                    tag_stats[tag.name]["correct"] += 1
+
+        weak_tag_names = [
+            k for k, v in tag_stats.items()
+            if v["total"] >= 2 and v["correct"] / v["total"] < 0.7
+        ]
+
+        # Split into weak and other pools
+        weak_pool = [q for q in all_questions if any(t.name in weak_tag_names for t in q.tags)]
+        other_pool = [q for q in all_questions if q not in weak_pool]
+
+        # Also deprioritize recently-correct questions
+        recent_correct_ids = {
+            a.question_id for a in attempts[-50:]
+            if a.is_correct
+        }
+        other_pool = sorted(other_pool, key=lambda q: q.id in recent_correct_ids)
+
+        if mode == "weak":
+            pool = weak_pool if weak_pool else all_questions
+            selected = random.sample(pool, min(count, len(pool)))
+        else:  # smart
+            weak_count = int(count * 0.6)
+            random_count = count - weak_count
+            weak_pick = random.sample(weak_pool, min(weak_count, len(weak_pool))) if weak_pool else []
+            remaining = random_count + (weak_count - len(weak_pick))
+            random_pick = random.sample(other_pool, min(remaining, len(other_pool))) if other_pool else []
+            selected = weak_pick + random_pick
+
+    random.shuffle(selected)
+    return {
+        "count": len(selected),
+        "mode": mode,
+        "questions": [
+            {
+                "id": q.id,
+                "content": q.content,
+                "options": json.loads(q.options) if q.options else None,
+                "difficulty": q.difficulty,
+                "question_type": q.question_type,
+                "tags": [t.name for t in q.tags],
+            }
+            for q in selected
+        ],
+    }
+
+
+# ── Batch Attempts (練習結束批次送出) ─────────────────────────────
+
+class BatchAttemptItem(BaseModel):
+    question_id: int
+    answer_given: str
+    time_spent: Optional[int] = None
+
+class BatchAttemptCreate(BaseModel):
+    student_id: int
+    attempts: list[BatchAttemptItem]
+
+
+@app.post("/api/attempts/batch")
+def batch_record_attempts(data: BatchAttemptCreate, db=Depends(get_db)):
+    """Submit multiple attempts at once (end of practice session)."""
+    results = []
+    for item in data.attempts:
+        q = db.query(Question).filter(Question.id == item.question_id).first()
+        if not q:
+            continue
+        is_correct = item.answer_given.strip().upper() == q.answer.strip().upper()
+        att = Attempt(
+            student_id=data.student_id,
+            question_id=item.question_id,
+            answer_given=item.answer_given,
+            is_correct=is_correct,
+            time_spent=item.time_spent,
+        )
+        db.add(att)
+        results.append({
+            "question_id": item.question_id,
+            "is_correct": is_correct,
+            "correct_answer": q.answer,
+        })
+    db.commit()
+    correct_count = sum(1 for r in results if r["is_correct"])
+    return {
+        "total": len(results),
+        "correct": correct_count,
+        "accuracy": round(correct_count / len(results) * 100, 1) if results else 0,
+        "results": results,
+    }
+
+
+# ── Chapter Management ────────────────────────────────────────────
+
+@app.put("/api/chapters/{chapter_id}")
+def update_chapter(chapter_id: int, data: ChapterCreate, db=Depends(get_db)):
+    ch = db.query(Chapter).filter(Chapter.id == chapter_id).first()
+    if not ch:
+        raise HTTPException(404, "Chapter not found")
+    ch.subject_id = data.subject_id
+    ch.name = data.name
+    ch.sort_order = data.sort_order
+    db.commit()
+    return {"id": ch.id, "name": ch.name}
+
+
+@app.delete("/api/chapters/{chapter_id}")
+def delete_chapter(chapter_id: int, db=Depends(get_db)):
+    ch = db.query(Chapter).filter(Chapter.id == chapter_id).first()
+    if not ch:
+        raise HTTPException(404, "Chapter not found")
+    q_count = db.query(Question).filter(Question.chapter_id == chapter_id).count()
+    if q_count > 0:
+        raise HTTPException(400, f"Chapter has {q_count} questions, delete them first")
+    db.delete(ch)
+    db.commit()
+    return {"msg": "Deleted"}
 
 
 # ── Static Files & Frontend Serving ──────────────────────────────
