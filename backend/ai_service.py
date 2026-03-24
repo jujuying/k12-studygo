@@ -57,8 +57,9 @@ def generate_diagram(question_content: str, answer: str, chapter_hint: str = "")
 - 只輸出 mermaid 語法，不要其他說明文字
 - 用繁體中文標籤
 - 保持簡潔清晰，節點不超過 12 個
-- 顏色和樣式盡量豐富（可用 style 或 classDef）
 - 確保語法正確，可被 Mermaid.js v11 渲染
+- 重要：只有 flowchart/graph 類型可用 classDef 和 style；mindmap、timeline、pie、xychart、sequenceDiagram 不支援 classDef/style，請勿添加
+- mindmap 節點文字不要包含括號，避免語法衝突
 
 題目：
 {question_content}

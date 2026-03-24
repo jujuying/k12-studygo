@@ -827,13 +827,13 @@
         `;
         modal.classList.remove('hidden');
 
-        // Render mermaid
+        // Render mermaid diagrams
         document.querySelectorAll('.mermaid-render').forEach(async (el) => {
-            const chart = el.dataset.chart;
+            const chart = cleanMermaidCode(el.dataset.chart);
             try {
                 const { svg } = await mermaid.render('mermaid-' + Math.random().toString(36).slice(2), chart);
                 el.innerHTML = svg;
-            } catch(e) { el.innerHTML = `<pre class="text-xs text-red-400">${e.message}</pre>`; }
+            } catch(e) { el.innerHTML = `<pre class="text-xs bg-white p-3 rounded-lg overflow-x-auto text-purple-700">${escHtml(chart)}</pre>`; }
         });
     }
 
@@ -875,10 +875,7 @@
                         </div>
                         <div id="new-diagram"></div>
                     </div>`;
-                try {
-                    const { svg } = await mermaid.render('md-' + Date.now(), data.content);
-                    document.getElementById('new-diagram').innerHTML = svg;
-                } catch(e) { document.getElementById('new-diagram').innerHTML = `<pre class="text-xs bg-white p-3 rounded-lg">${escHtml(data.content)}</pre>`; }
+                await renderMermaidToEl('new-diagram', data.content);
             } else if (type === 'similar') {
                 const sq = data.similar_question;
                 result.innerHTML = `
@@ -1365,23 +1362,52 @@
         }
     }
 
+    // Clean Mermaid syntax: strip classDef/style lines from non-flowchart types
+    function cleanMermaidCode(code) {
+        if (!code) return code;
+        const firstLine = code.trim().split('\n')[0].trim().toLowerCase();
+        const isFlowchart = firstLine.startsWith('flowchart') || firstLine.startsWith('graph');
+        if (!isFlowchart) {
+            // Remove classDef, style, and class lines (not supported in mindmap/timeline/pie/etc)
+            code = code.split('\n').filter(line => {
+                const trimmed = line.trim().toLowerCase();
+                return !trimmed.startsWith('classdef') && !trimmed.startsWith('style ') && !trimmed.startsWith('class ');
+            }).join('\n');
+        }
+        // Escape problematic chars in labels: replace unbalanced parentheses in mindmap nodes
+        return code.trim();
+    }
+
+    async function renderMermaidToEl(elId, code) {
+        const cleaned = cleanMermaidCode(code);
+        // Wait for DOM to settle
+        await new Promise(r => setTimeout(r, 50));
+        const el = document.getElementById(elId);
+        if (!el) return;
+        try {
+            const { svg } = await mermaid.render('mmd-' + Date.now() + '-' + Math.random().toString(36).slice(2), cleaned);
+            el.innerHTML = svg;
+        } catch(e) {
+            console.warn('Mermaid render failed, retrying with simplified code:', e.message);
+            // Retry: strip all style-related lines and special chars
+            try {
+                let simple = cleaned.split('\n').filter(l => !l.trim().startsWith('%%')).join('\n');
+                const { svg } = await mermaid.render('mmd-retry-' + Date.now(), simple);
+                el.innerHTML = svg;
+            } catch(e2) {
+                // Final fallback: show as formatted code block
+                el.innerHTML = `<pre class="text-xs bg-white/80 p-4 rounded-xl overflow-x-auto text-purple-700 leading-relaxed border border-purple-100">${escHtml(cleaned)}</pre>`;
+            }
+        }
+    }
+
     // Store last question for explanation display + render diagram
     const _origShowAIRandom = showAIRandomQuestion;
     showAIRandomQuestion = async function(q) {
         window._lastAIRandomQ = q;
         _origShowAIRandom(q);
-        // Render Mermaid diagram if present
         if (q.diagram) {
-            try {
-                const el = document.getElementById('ai-random-diagram');
-                if (el) {
-                    const { svg } = await mermaid.render('ai-rand-' + Date.now(), q.diagram);
-                    el.innerHTML = svg;
-                }
-            } catch(e) {
-                const el = document.getElementById('ai-random-diagram');
-                if (el) el.innerHTML = `<pre class="text-xs bg-white p-3 rounded-lg overflow-x-auto">${escHtml(q.diagram)}</pre>`;
-            }
+            await renderMermaidToEl('ai-random-diagram', q.diagram);
         }
     };
 
