@@ -583,6 +583,25 @@ def ai_random_question(req: AIRandomRequest, db=Depends(get_db)):
             db.flush()
         q.tags.append(tag)
     db.add(q)
+    db.flush()
+
+    # Auto-generate Mermaid diagram and save as AI content
+    diagram_content = None
+    try:
+        from ai_service import generate_diagram
+        diagram_content = generate_diagram(
+            qd["content"], qd["answer"], chapter_hint=chapter.name
+        )
+        ai_diagram = AIContent(
+            question_id=q.id,
+            content_type="diagram",
+            content=diagram_content,
+            model_used="claude-haiku-4-5-20251001",
+        )
+        db.add(ai_diagram)
+    except Exception:
+        pass  # Diagram generation is optional, don't block the question
+
     db.commit()
 
     return {
@@ -595,6 +614,7 @@ def ai_random_question(req: AIRandomRequest, db=Depends(get_db)):
         "tags": qd.get("tags", []),
         "chapter": chapter.name,
         "subject": subject.name,
+        "diagram": diagram_content,
     }
 
 
@@ -706,7 +726,8 @@ def generate_ai_content(question_id: int, req: AIGenerateRequest, db=Depends(get
         if req.content_type == "story":
             content = generate_story(q.content, q.answer, q.explanation or "")
         elif req.content_type == "diagram":
-            content = generate_diagram(q.content, q.answer)
+            ch_name = q.chapter.name if q.chapter else ""
+            content = generate_diagram(q.content, q.answer, chapter_hint=ch_name)
         elif req.content_type == "hint":
             content = generate_hint(q.content)
             return {"hint": content}

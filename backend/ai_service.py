@@ -38,15 +38,27 @@ def generate_story(question_content: str, answer: str, explanation: str = "") ->
     return response.content[0].text
 
 
-def generate_diagram(question_content: str, answer: str) -> str:
+def generate_diagram(question_content: str, answer: str, chapter_hint: str = "") -> str:
     """Generate a Mermaid.js diagram for the concept."""
-    prompt = f"""你是一位教學視覺化專家。請根據以下題目的核心概念，產生一個 Mermaid.js 圖表。
+    prompt = f"""你是一位台灣國高中教學視覺化專家。請根據以下題目的核心概念，產生一個 Mermaid.js 圖表。
+
+可用的圖表類型（請選擇最適合的）：
+1. flowchart TD — 流程圖：適合因果關係、政治體制架構、決策流程、地理成因
+2. mindmap — 心智圖：適合知識點整理、概念分類（如：台灣產業分類、文化特色）
+3. timeline — 時間線：適合歷史事件年表、朝代更替、重大事件順序
+4. pie — 圓餅圖：適合比例分析（如：產業結構、人口組成、選舉得票）
+5. xychart-beta — 長條/折線圖：適合數據比較（如：各國GDP、人口成長、氣溫變化）
+6. sequenceDiagram — 序列圖：適合互動過程（如：貿易往來、外交談判、法律程序）
+7. graph LR — 關係圖：適合人物關係、國際組織關係、地理區域連結
+
+{f"章節提示：{chapter_hint}" if chapter_hint else ""}
 
 要求：
-- 只輸出 mermaid 語法，不要其他說明
+- 只輸出 mermaid 語法，不要其他說明文字
 - 用繁體中文標籤
-- 選擇最適合的圖表類型（flowchart/mindmap/sequence 等）
-- 保持簡潔，節點不超過 10 個
+- 保持簡潔清晰，節點不超過 12 個
+- 顏色和樣式盡量豐富（可用 style 或 classDef）
+- 確保語法正確，可被 Mermaid.js v11 渲染
 
 題目：
 {question_content}
