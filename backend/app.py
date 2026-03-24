@@ -494,6 +494,110 @@ def generate_topic_questions(req: GenerateTopicRequest, db=Depends(get_db)):
     return {"msg": f"Generated {len(created_ids)} questions", "ids": created_ids}
 
 
+# ---------------------------------------------------------------------------
+# AI Random Question — generate 1 question on-the-fly, save to DB, return it
+# ---------------------------------------------------------------------------
+class AIRandomRequest(BaseModel):
+    subject_id: int
+    chapter_id: Optional[int] = None
+    difficulty: Optional[int] = None  # 1-5, None = random
+
+
+@app.post("/api/ai-random-question")
+def ai_random_question(req: AIRandomRequest, db=Depends(get_db)):
+    """Generate a single AI question, persist it, and return for immediate practice."""
+    from ai_service import client, DEFAULT_MODEL
+
+    subject = db.query(Subject).get(req.subject_id)
+    if not subject:
+        raise HTTPException(404, "Subject not found")
+
+    # Pick chapter: specific or random from subject
+    if req.chapter_id:
+        chapter = db.query(Chapter).get(req.chapter_id)
+        if not chapter:
+            raise HTTPException(404, "Chapter not found")
+    else:
+        chapters = db.query(Chapter).filter(Chapter.subject_id == req.subject_id).all()
+        if not chapters:
+            raise HTTPException(400, "No chapters for this subject")
+        chapter = random.choice(chapters)
+
+    diff_instruction = (
+        f"難度為 {req.difficulty}（1 最易 5 最難）"
+        if req.difficulty
+        else f"難度隨機（1-5 之間）"
+    )
+
+    prompt = f"""你是一位專業的台灣國高中出題老師，精通 108 課綱。
+請出 1 題選擇題。
+
+科目：{subject.name}（{'國中' if subject.level == 'junior' else '高中'}）
+章節：{chapter.name}
+
+要求：
+- 繁體中文，符合台灣 108 課綱程度
+- {diff_instruction}
+- 素養導向，融入生活情境、圖表判讀或資料分析，避免純背誦
+- 4 個選項（A/B/C/D），只有 1 個正確
+- 附詳細解析（為何正確、其他選項為何錯）
+- 附 1-3 個知識點標籤
+- 每次出題內容要有變化，不要重複
+
+回傳 JSON：
+{{"content": "題幹", "options": ["A. ...", "B. ...", "C. ...", "D. ..."], "answer": "B", "explanation": "詳解", "difficulty": 3, "tags": ["標籤"]}}
+只輸出 JSON，不要其他文字。"""
+
+    response = client.messages.create(
+        model=DEFAULT_MODEL,
+        max_tokens=1200,
+        messages=[{"role": "user", "content": prompt}],
+    )
+    text = response.content[0].text
+    if "```json" in text:
+        text = text.split("```json")[1].split("```")[0].strip()
+    elif "```" in text:
+        text = text.split("```")[1].split("```")[0].strip()
+
+    try:
+        qd = json.loads(text)
+    except json.JSONDecodeError:
+        raise HTTPException(500, "AI returned invalid JSON")
+
+    # Save to database
+    q = Question(
+        chapter_id=chapter.id,
+        source="AI 隨機出題",
+        question_type="single_choice",
+        difficulty=qd.get("difficulty", 3),
+        content=qd["content"],
+        options=json.dumps(qd["options"], ensure_ascii=False),
+        answer=qd["answer"],
+        explanation=qd.get("explanation", ""),
+    )
+    for tag_name in qd.get("tags", []):
+        tag = db.query(Tag).filter(Tag.name == tag_name).first()
+        if not tag:
+            tag = Tag(name=tag_name)
+            db.add(tag)
+            db.flush()
+        q.tags.append(tag)
+    db.add(q)
+    db.commit()
+
+    return {
+        "id": q.id,
+        "content": qd["content"],
+        "options": qd["options"],
+        "answer": qd["answer"],
+        "explanation": qd.get("explanation", ""),
+        "difficulty": qd.get("difficulty", 3),
+        "tags": qd.get("tags", []),
+        "chapter": chapter.name,
+        "subject": subject.name,
+    }
+
+
 @app.get("/api/debug")
 def debug_env():
     key = os.environ.get("ANTHROPIC_API_KEY", "")

@@ -134,6 +134,10 @@
                         <svg class="w-4 h-4 inline -mt-0.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
                         拍照
                     </button>
+                    <button onclick="showSection('ai-random')" id="tab-ai-random" class="nav-tab">
+                        <svg class="w-4 h-4 inline -mt-0.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                        AI出題
+                    </button>
                     <button onclick="showSection('upload')" id="tab-upload" class="nav-tab">
                         <svg class="w-4 h-4 inline -mt-0.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
                         新增
@@ -425,6 +429,58 @@
         </section>
 
         <!-- ══════════════════════════════════════ -->
+        <!-- ── AI Random Question Section ── -->
+        <!-- ══════════════════════════════════════ -->
+        <section id="sec-ai-random" class="hidden fade-in">
+            <div id="ai-random-setup" class="max-w-lg mx-auto slide-up">
+                <div class="text-center mb-6">
+                    <div class="w-16 h-16 mx-auto rounded-2xl flex items-center justify-center mb-4" style="background:linear-gradient(135deg,#f59e0b,#ef4444);">
+                        <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                    </div>
+                    <h2 class="text-xl font-bold text-gray-800">AI 隨機出題</h2>
+                    <p class="text-sm text-gray-400 mt-1">AI 即時產生題目，每題自動存入題庫</p>
+                </div>
+                <div class="glass-card p-6 space-y-4">
+                    <div>
+                        <label class="block text-sm text-gray-600 mb-1.5 font-medium">選擇科目</label>
+                        <select id="ai-random-subject" class="form-input form-select w-full" onchange="loadAIRandomChapters()"></select>
+                    </div>
+                    <div>
+                        <label class="block text-sm text-gray-600 mb-1.5 font-medium">選擇章節 <span class="text-gray-400">（可不選，隨機）</span></label>
+                        <select id="ai-random-chapter" class="form-input form-select w-full">
+                            <option value="">隨機章節</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm text-gray-600 mb-1.5 font-medium">難度</label>
+                        <div class="grid grid-cols-4 gap-2">
+                            <label class="relative cursor-pointer">
+                                <input type="radio" name="ai-diff" value="" class="peer sr-only" checked>
+                                <div class="border-2 border-gray-200 rounded-xl py-2.5 text-center text-sm font-semibold text-gray-500 peer-checked:border-brand-500 peer-checked:text-brand-600 peer-checked:bg-brand-50 transition">隨機</div>
+                            </label>
+                            <label class="relative cursor-pointer">
+                                <input type="radio" name="ai-diff" value="2" class="peer sr-only">
+                                <div class="border-2 border-gray-200 rounded-xl py-2.5 text-center text-sm font-semibold text-gray-500 peer-checked:border-emerald-500 peer-checked:text-emerald-600 peer-checked:bg-emerald-50 transition">簡單</div>
+                            </label>
+                            <label class="relative cursor-pointer">
+                                <input type="radio" name="ai-diff" value="3" class="peer sr-only">
+                                <div class="border-2 border-gray-200 rounded-xl py-2.5 text-center text-sm font-semibold text-gray-500 peer-checked:border-yellow-500 peer-checked:text-yellow-600 peer-checked:bg-yellow-50 transition">中等</div>
+                            </label>
+                            <label class="relative cursor-pointer">
+                                <input type="radio" name="ai-diff" value="5" class="peer sr-only">
+                                <div class="border-2 border-gray-200 rounded-xl py-2.5 text-center text-sm font-semibold text-gray-500 peer-checked:border-red-500 peer-checked:text-red-600 peer-checked:bg-red-50 transition">困難</div>
+                            </label>
+                        </div>
+                    </div>
+                    <button onclick="generateAIRandomQuestion()" id="ai-random-btn" class="w-full py-3 rounded-xl text-white font-semibold text-sm hover:shadow-lg transition" style="background:linear-gradient(135deg,#f59e0b,#ef4444);">
+                        AI 出題
+                    </button>
+                </div>
+            </div>
+            <div id="ai-random-area" class="hidden max-w-2xl mx-auto"></div>
+        </section>
+
+        <!-- ══════════════════════════════════════ -->
         <!-- ── Upload Section ── -->
         <!-- ══════════════════════════════════════ -->
         <section id="sec-upload" class="hidden fade-in">
@@ -608,7 +664,7 @@
     async function loadAllSubjectSelects() {
         const subjects = await api('/api/subjects');
         const html = subjects.map(s => `<option value="${s.id}">${s.level === 'junior' ? '國中' : '高中'} ${s.name}</option>`).join('');
-        ['practice-subject', 'q-subject'].forEach(id => {
+        ['practice-subject', 'q-subject', 'ai-random-subject'].forEach(id => {
             const el = document.getElementById(id);
             if (el) el.innerHTML = html;
         });
@@ -1157,6 +1213,159 @@
         } catch (e) {
             result.innerHTML = `<div class="p-3 rounded-xl bg-red-50 border border-red-100"><span class="text-red-600 text-sm">語音生成失敗: ${escHtml(e.message)}</span></div>`;
         }
+    }
+
+    // ── AI Random Question ──
+    let aiRandomScore = 0;
+    let aiRandomTotal = 0;
+
+    async function loadAIRandomChapters() {
+        const subjectId = document.getElementById('ai-random-subject').value;
+        const sel = document.getElementById('ai-random-chapter');
+        sel.innerHTML = '<option value="">隨機章節</option>';
+        if (!subjectId) return;
+        try {
+            const chapters = await api(`/api/chapters?subject_id=${subjectId}`);
+            chapters.forEach(c => {
+                sel.innerHTML += `<option value="${c.id}">${c.name}</option>`;
+            });
+        } catch(e) { console.error(e); }
+    }
+
+    async function generateAIRandomQuestion() {
+        const subjectId = document.getElementById('ai-random-subject').value;
+        if (!subjectId) { alert('請先選擇科目'); return; }
+        const chapterId = document.getElementById('ai-random-chapter').value;
+        const difficulty = document.querySelector('input[name="ai-diff"]:checked').value;
+
+        const btn = document.getElementById('ai-random-btn');
+        const setupDiv = document.getElementById('ai-random-setup');
+        const area = document.getElementById('ai-random-area');
+
+        // Show loading
+        btn.disabled = true;
+        btn.innerHTML = '<span class="inline-flex items-center gap-2"><span class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>AI 出題中...</span>';
+
+        try {
+            const body = { subject_id: parseInt(subjectId) };
+            if (chapterId) body.chapter_id = parseInt(chapterId);
+            if (difficulty) body.difficulty = parseInt(difficulty);
+
+            const data = await api('/api/ai-random-question', {
+                method: 'POST',
+                body: JSON.stringify(body),
+            });
+
+            aiRandomTotal++;
+            setupDiv.classList.add('hidden');
+            area.classList.remove('hidden');
+            showAIRandomQuestion(data);
+        } catch (e) {
+            alert('AI 出題失敗: ' + e.message);
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = 'AI 出題';
+        }
+    }
+
+    function showAIRandomQuestion(q) {
+        const area = document.getElementById('ai-random-area');
+        area.innerHTML = `
+            <div class="slide-up">
+                <!-- Header -->
+                <div class="flex items-center justify-between mb-4">
+                    <div class="flex items-center gap-2">
+                        <span class="tag-pill bg-amber-50 text-amber-700 font-semibold">${escHtml(q.subject)}</span>
+                        <span class="tag-pill bg-purple-50 text-purple-600 text-xs">${escHtml(q.chapter)}</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span class="diff-badge diff-${q.difficulty}">${diffLabels[q.difficulty]}</span>
+                        <span class="text-xs text-gray-400">第 ${aiRandomTotal} 題 | 答對 ${aiRandomScore}</span>
+                    </div>
+                </div>
+                <!-- Question card -->
+                <div class="glass-card p-6">
+                    <div class="flex items-start gap-2 mb-4">
+                        <span class="shrink-0 w-6 h-6 rounded-lg flex items-center justify-center text-xs font-bold text-white" style="background:linear-gradient(135deg,#f59e0b,#ef4444);">Q</span>
+                        <p class="text-gray-800 whitespace-pre-wrap leading-relaxed">${escHtml(q.content)}</p>
+                    </div>
+                    <div class="space-y-2.5" id="ai-random-options">
+                        ${q.options.map((o, i) => `
+                            <button onclick="checkAIRandomAnswer(this, '${o.charAt(0)}', '${q.answer}')"
+                                class="option-btn w-full text-left px-4 py-3 text-sm flex items-center gap-3">
+                                <span class="w-7 h-7 rounded-full bg-gray-100 flex items-center justify-center text-xs font-bold text-gray-500 shrink-0">${o.charAt(0)}</span>
+                                <span>${escHtml(o.substring(2).trim())}</span>
+                            </button>`).join('')}
+                    </div>
+                    <div id="ai-random-feedback" class="mt-4 hidden"></div>
+                </div>
+                <!-- Saved notice -->
+                <div class="mt-3 flex items-center gap-1.5 text-xs text-gray-400 justify-center">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                    已自動存入題庫 (ID: ${q.id})
+                </div>
+            </div>`;
+    }
+
+    function checkAIRandomAnswer(btn, selected, correct) {
+        const buttons = document.getElementById('ai-random-options').querySelectorAll('button');
+        buttons.forEach(b => {
+            b.disabled = true;
+            b.style.cursor = 'default';
+            const letter = b.querySelector('span').textContent.trim();
+            if (letter === correct) {
+                b.classList.add('option-correct');
+                b.querySelector('span:first-child').className = 'w-7 h-7 rounded-full bg-emerald-500 flex items-center justify-center text-xs font-bold text-white shrink-0';
+            }
+        });
+        const isCorrect = selected === correct;
+        if (isCorrect) {
+            btn.classList.add('option-correct');
+            aiRandomScore++;
+        } else {
+            btn.classList.add('option-wrong');
+            btn.querySelector('span:first-child').className = 'w-7 h-7 rounded-full bg-red-500 flex items-center justify-center text-xs font-bold text-white shrink-0';
+        }
+        // Show feedback with explanation
+        const fb = document.getElementById('ai-random-feedback');
+        fb.classList.remove('hidden');
+        fb.innerHTML = `
+            <div class="p-4 rounded-xl ${isCorrect ? 'bg-emerald-50 border border-emerald-100' : 'bg-red-50 border border-red-100'} mb-3">
+                <div class="flex items-center gap-2 mb-2">
+                    ${isCorrect
+                        ? '<svg class="w-5 h-5 text-emerald-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>'
+                        : '<svg class="w-5 h-5 text-red-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>'}
+                    <span class="text-sm font-semibold ${isCorrect ? 'text-emerald-700' : 'text-red-700'}">
+                        ${isCorrect ? '答對了！' : '答錯了，正確答案：' + correct}
+                    </span>
+                </div>
+            </div>
+            <div class="p-4 rounded-xl bg-blue-50 border border-blue-100 text-sm text-blue-800 leading-relaxed" id="ai-random-explanation"></div>
+            <div class="flex gap-3 mt-4">
+                <button onclick="generateAIRandomQuestion()" class="flex-1 py-2.5 rounded-xl text-white font-semibold text-sm hover:shadow-lg transition" style="background:linear-gradient(135deg,#f59e0b,#ef4444);">
+                    再出一題
+                </button>
+                <button onclick="resetAIRandom()" class="px-5 py-2.5 rounded-xl text-sm font-semibold border-2 border-gray-200 text-gray-500 hover:bg-gray-50">
+                    重新設定
+                </button>
+            </div>`;
+        // Load explanation from the question data stored in the onclick context
+        // We need to re-fetch or store it; let's use a global
+        if (window._lastAIRandomQ) {
+            document.getElementById('ai-random-explanation').textContent = window._lastAIRandomQ.explanation || '';
+        }
+    }
+
+    // Store last question for explanation display
+    const _origShowAIRandom = showAIRandomQuestion;
+    showAIRandomQuestion = function(q) {
+        window._lastAIRandomQ = q;
+        _origShowAIRandom(q);
+    };
+
+    function resetAIRandom() {
+        document.getElementById('ai-random-setup').classList.remove('hidden');
+        document.getElementById('ai-random-area').classList.add('hidden');
     }
 
     // ── PWA Service Worker Registration ──
