@@ -223,6 +223,277 @@ def seed_sample_data(db=Depends(get_db)):
     return {"msg": "Seeded", "count": count}
 
 
+# ---------------------------------------------------------------------------
+# Social Studies Curriculum: chapters + sample questions (108課綱 國中社會)
+# ---------------------------------------------------------------------------
+SOCIAL_CHAPTERS = {
+    # ── 歷史 ──
+    "七上歷史": [
+        "史前台灣與原住民族文化",
+        "大航海時代的台灣（荷西時期）",
+        "鄭氏時期的經營",
+        "清帝國時期的台灣",
+    ],
+    "七下歷史": [
+        "清末開港與近代化建設",
+        "日治時期的殖民統治與社會變遷",
+        "戰後台灣的政治與經濟發展",
+    ],
+    "八上歷史": [
+        "商周至隋唐的國家與社會",
+        "宋元多民族並立與交流",
+        "東亞文化圈的形成與互動",
+    ],
+    "八下歷史": [
+        "明清時期東亞世界的變動",
+        "晚清的變局與改革",
+        "中華民國的建立與發展",
+    ],
+    "九上歷史": [
+        "古代文明的發展",
+        "中世紀歐洲與伊斯蘭世界",
+        "文藝復興與宗教改革",
+        "大航海與近代世界的形成",
+    ],
+    "九下歷史": [
+        "啟蒙運動與美法革命",
+        "工業革命與帝國主義",
+        "兩次世界大戰與冷戰",
+        "當代世界的發展與挑戰",
+    ],
+    # ── 地理 ──
+    "七上地理": [
+        "地理學基本概念與地圖技能",
+        "台灣的位置與地形",
+        "台灣的氣候與水文",
+    ],
+    "七下地理": [
+        "台灣的人口與族群",
+        "台灣的產業發展",
+        "台灣的聚落、交通與區域特色",
+    ],
+    "八上地理": [
+        "中國的自然環境",
+        "中國的人口與產業",
+        "中國的區域劃分",
+    ],
+    "八下地理": [
+        "東南亞與南亞",
+        "西亞、北非與東北亞",
+    ],
+    "九上地理": [
+        "歐洲的自然與人文環境",
+        "俄羅斯、中亞與非洲",
+    ],
+    "九下地理": [
+        "北美洲與中南美洲",
+        "大洋洲、兩極與全球議題",
+    ],
+    # ── 公民與社會 ──
+    "七上公民": [
+        "自我探索與人際關係",
+        "家庭與性別平等",
+    ],
+    "七下公民": [
+        "社會文化與多元",
+        "社會規範、法律與公民參與",
+    ],
+    "八上公民": [
+        "國家與民主政治",
+        "中央與地方政府",
+        "政治參與與選舉",
+    ],
+    "八下公民": [
+        "法律的基本概念（民法與刑法）",
+        "權利救濟與少年事件處理",
+    ],
+    "九上公民": [
+        "經濟學基本概念（供需與市場）",
+        "生產、消費與貨幣金融",
+    ],
+    "九下公民": [
+        "全球化與國際組織",
+        "永續發展、媒體素養與公民責任",
+    ],
+}
+
+SOCIAL_SAMPLE_QUESTIONS = [
+    # 歷史
+    {"ch": "史前台灣與原住民族文化", "src": "112會考", "content": "台灣目前發現最早的人類化石為下列何者？", "opts": ["A. 長濱文化人", "B. 左鎮人", "C. 卑南文化人", "D. 澎湖原人"], "ans": "D", "exp": "澎湖原人的下顎骨化石是目前台灣發現年代最久遠的人類化石，距今約 45 萬年至 19 萬年前。", "diff": 2, "tags": ["台灣史前文化", "考古"]},
+    {"ch": "大航海時代的台灣（荷西時期）", "src": "113會考", "content": "17 世紀荷蘭東印度公司在台灣的統治中心位於下列何處？", "opts": ["A. 淡水", "B. 基隆", "C. 大員（台南安平）", "D. 鹿港"], "ans": "C", "exp": "荷蘭東印度公司於 1624 年在大員（今台南安平）建立熱蘭遮城，作為統治台灣的行政中心。", "diff": 1, "tags": ["荷蘭時期", "大航海"]},
+    {"ch": "日治時期的殖民統治與社會變遷", "src": "112會考", "content": "日治時期推動的「皇民化運動」主要目的為何？", "opts": ["A. 推廣日本文學", "B. 將台灣人同化為日本人", "C. 發展台灣經濟", "D. 促進台日貿易"], "ans": "B", "exp": "皇民化運動始於 1937 年中日戰爭爆發後，目的是將台灣人改造為效忠天皇的日本國民，包括改姓名、廢漢文、推行國語（日語）等措施。", "diff": 2, "tags": ["日治時期", "皇民化"]},
+    {"ch": "宋元多民族並立與交流", "src": "113會考", "content": "宋代時，政府為增加財政收入而大力發展的經濟活動為何？", "opts": ["A. 畜牧業", "B. 海外貿易", "C. 礦業開發", "D. 軍事屯田"], "ans": "B", "exp": "宋代因北方領土受遼、金壓迫，積極發展海外貿易，在廣州、泉州、明州等地設置市舶司管理貿易，成為重要財政來源。", "diff": 2, "tags": ["宋代", "海外貿易"]},
+    {"ch": "兩次世界大戰與冷戰", "src": "112會考", "content": "冷戰時期，世界被劃分為兩大陣營，其核心對立的兩國為？", "opts": ["A. 英國與法國", "B. 美國與蘇聯", "C. 中國與日本", "D. 德國與義大利"], "ans": "B", "exp": "冷戰（1947-1991）是以美國為首的資本主義陣營與以蘇聯為首的共產主義陣營之間的對抗，雙方在政治、軍事、經濟和意識形態上全面對立。", "diff": 1, "tags": ["冷戰", "世界史"]},
+    # 地理
+    {"ch": "台灣的位置與地形", "src": "113會考", "content": "台灣本島最高峰為下列何者？", "opts": ["A. 雪山", "B. 玉山", "C. 合歡山", "D. 阿里山"], "ans": "B", "exp": "玉山主峰海拔 3,952 公尺，是台灣也是東亞第一高峰。", "diff": 1, "tags": ["台灣地形", "山脈"]},
+    {"ch": "台灣的氣候與水文", "src": "112會考", "content": "台灣北部冬季多雨的主要原因為何？", "opts": ["A. 颱風帶來降雨", "B. 東北季風遇山地形抬升", "C. 太平洋高壓影響", "D. 西南氣流帶來水氣"], "ans": "B", "exp": "冬季東北季風從海面帶來水氣，遇到台灣北部山地產生地形雨，因此北部冬季降雨較多，形成「冬雨型」氣候特徵。", "diff": 2, "tags": ["台灣氣候", "季風"]},
+    {"ch": "中國的自然環境", "src": "113會考", "content": "中國地勢呈現何種特徵？", "opts": ["A. 北高南低", "B. 西高東低，三級階梯", "C. 中間高四周低", "D. 東西對稱"], "ans": "B", "exp": "中國地勢西高東低，大致呈三級階梯狀分布：第一階梯為青藏高原（平均 4000 公尺以上），第二階梯為高原盆地（1000-2000 公尺），第三階梯為平原丘陵（500 公尺以下）。", "diff": 2, "tags": ["中國地理", "地形"]},
+    {"ch": "北美洲與中南美洲", "src": "112會考", "content": "下列何者為連接大西洋與太平洋的重要人工水道？", "opts": ["A. 蘇乊士運河", "B. 巴拿馬運河", "C. 基爾運河", "D. 京杭大運河"], "ans": "B", "exp": "巴拿馬運河位於中美洲巴拿馬境內，連接大西洋與太平洋，大幅縮短船隻繞行南美洲的航程，是全球最重要的航運水道之一。", "diff": 1, "tags": ["美洲地理", "運河"]},
+    # 公民
+    {"ch": "國家與民主政治", "src": "113會考", "content": "我國的政府體制中，負責審查國家預算的機關為何？", "opts": ["A. 行政院", "B. 立法院", "C. 監察院", "D. 考試院"], "ans": "B", "exp": "依據《憲法》規定，立法院掌有審議預算案之權，行政院須將年度預算案送交立法院審議通過後始得執行。", "diff": 2, "tags": ["政府體制", "立法院"]},
+    {"ch": "法律的基本概念（民法與刑法）", "src": "112會考", "content": "小明在網路上購買商品後想要退貨，依《消費者保護法》規定，他在收到商品後幾天內可以無條件退貨？", "opts": ["A. 3 天", "B. 7 天", "C. 14 天", "D. 30 天"], "ans": "B", "exp": "依《消費者保護法》第 19 條規定，通訊交易（包括網路購物）的消費者在收到商品後 7 日內，得不附理由退回商品。", "diff": 2, "tags": ["消保法", "消費者權益"]},
+    {"ch": "經濟學基本概念（供需與市場）", "src": "113會考", "content": "當某商品價格上升時，在其他條件不變下，消費者對該商品的需求量會如何變化？", "opts": ["A. 增加", "B. 減少", "C. 不變", "D. 無法判斷"], "ans": "B", "exp": "根據需求法則，在其他條件不變下，商品價格與需求量呈反向關係——價格上升，需求量下降；價格下降，需求量上升。", "diff": 1, "tags": ["需求法則", "經濟學"]},
+]
+
+
+@app.post("/api/seed-social")
+def seed_social_data(db=Depends(get_db)):
+    """Seed 108-curriculum social studies chapters and sample questions for junior high."""
+    social = db.query(Subject).filter(
+        Subject.name == "社會", Subject.level == "junior"
+    ).first()
+    if not social:
+        return {"msg": "Subject '社會' not found"}
+
+    # Check if already seeded (by checking if chapters exist)
+    existing = db.query(Chapter).filter(Chapter.subject_id == social.id).count()
+    if existing > 0:
+        return {"msg": "Social studies already seeded", "chapters": existing}
+
+    # Create all chapters
+    chapter_map = {}  # topic_name -> Chapter object
+    sort_idx = 0
+    for group, topics in SOCIAL_CHAPTERS.items():
+        for topic in topics:
+            full_name = f"{group}｜{topic}"
+            sort_idx += 1
+            ch = Chapter(subject_id=social.id, name=full_name, sort_order=sort_idx)
+            db.add(ch)
+            db.flush()
+            chapter_map[topic] = ch
+
+    # Create sample questions
+    count = 0
+    for s in SOCIAL_SAMPLE_QUESTIONS:
+        ch = chapter_map.get(s["ch"])
+        if not ch:
+            continue
+        q = Question(
+            chapter_id=ch.id, source=s["src"], question_type="single_choice",
+            difficulty=s["diff"], content=s["content"],
+            options=json.dumps(s["opts"], ensure_ascii=False),
+            answer=s["ans"], explanation=s["exp"],
+        )
+        for tag_name in s["tags"]:
+            tag = db.query(Tag).filter(Tag.name == tag_name).first()
+            if not tag:
+                tag = Tag(name=tag_name)
+                db.add(tag)
+                db.flush()
+            q.tags.append(tag)
+        db.add(q)
+        count += 1
+
+    db.commit()
+    return {
+        "msg": "Social studies seeded",
+        "chapters": sort_idx,
+        "questions": count,
+    }
+
+
+# ---------------------------------------------------------------------------
+# AI-powered question generation from curriculum topic
+# ---------------------------------------------------------------------------
+class GenerateTopicRequest(BaseModel):
+    subject_id: int
+    chapter_id: int
+    topic_description: Optional[str] = None
+    count: int = 3
+    difficulty: Optional[int] = None  # 1-5, None = mixed
+
+
+@app.post("/api/generate-topic-questions")
+def generate_topic_questions(req: GenerateTopicRequest, db=Depends(get_db)):
+    """Use AI to generate questions based on a chapter / curriculum topic."""
+    from ai_service import client, DEFAULT_MODEL
+
+    chapter = db.query(Chapter).get(req.chapter_id)
+    if not chapter:
+        raise HTTPException(404, "Chapter not found")
+    subject = db.query(Subject).get(req.subject_id)
+    if not subject:
+        raise HTTPException(404, "Subject not found")
+
+    topic = req.topic_description or chapter.name
+    diff_instruction = (
+        f"所有題目難度為 {req.difficulty}（1 最易 5 最難）"
+        if req.difficulty
+        else "題目難度混合，包含簡單(1-2)、中等(3)、困難(4-5)"
+    )
+
+    prompt = f"""你是一位專業的台灣國中社會科出題老師，精通 108 課綱。
+請根據以下主題，出 {req.count} 題選擇題。
+
+科目：{subject.name}
+章節：{chapter.name}
+主題補充：{topic}
+
+要求：
+- 繁體中文，符合台灣 108 課綱國中程度
+- {diff_instruction}
+- 題目要素養導向，融入生活情境或史料判讀，避免純背誦題
+- 每題 4 個選項（A/B/C/D）
+- 附上詳細解析，說明為何正確及其他選項為何錯誤
+- 附上 1-3 個知識點標籤
+
+回傳 JSON 陣列，格式：
+[
+  {{
+    "content": "題幹",
+    "options": ["A. ...", "B. ...", "C. ...", "D. ..."],
+    "answer": "B",
+    "explanation": "詳解",
+    "difficulty": 2,
+    "tags": ["標籤1", "標籤2"]
+  }}
+]
+只輸出 JSON，不要其他文字。"""
+
+    response = client.messages.create(
+        model=DEFAULT_MODEL,
+        max_tokens=3000,
+        messages=[{"role": "user", "content": prompt}],
+    )
+    text = response.content[0].text
+    if "```json" in text:
+        text = text.split("```json")[1].split("```")[0].strip()
+    elif "```" in text:
+        text = text.split("```")[1].split("```")[0].strip()
+
+    try:
+        questions_data = json.loads(text)
+    except json.JSONDecodeError:
+        raise HTTPException(500, "AI returned invalid JSON")
+
+    # Save to database
+    created_ids = []
+    for qd in questions_data:
+        q = Question(
+            chapter_id=chapter.id,
+            source="AI 自動出題",
+            question_type="single_choice",
+            difficulty=qd.get("difficulty", 3),
+            content=qd["content"],
+            options=json.dumps(qd["options"], ensure_ascii=False),
+            answer=qd["answer"],
+            explanation=qd.get("explanation", ""),
+        )
+        for tag_name in qd.get("tags", []):
+            tag = db.query(Tag).filter(Tag.name == tag_name).first()
+            if not tag:
+                tag = Tag(name=tag_name)
+                db.add(tag)
+                db.flush()
+            q.tags.append(tag)
+        db.add(q)
+        db.flush()
+        created_ids.append(q.id)
+
+    db.commit()
+    return {"msg": f"Generated {len(created_ids)} questions", "ids": created_ids}
+
+
 @app.get("/api/debug")
 def debug_env():
     key = os.environ.get("ANTHROPIC_API_KEY", "")
